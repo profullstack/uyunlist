@@ -1,0 +1,86 @@
+# Supabase Configuration for Onion Classifieds
+# This file configures the local Supabase instance
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[auth]
+enabled = true
+port = 54324
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["https://localhost:3000"]
+jwt_expiry = 3600
+enable_signup = true
+enable_email_signup = true
+enable_phone_signup = false
+enable_anonymous_users = false
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = false
+
+[auth.sms]
+enable_signup = false
+enable_confirmations = false
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[db.pooler]
+enabled = false
+port = 54329
+pool_mode = "transaction"
+default_pool_size = 20
+max_client_conn = 100
+
+[realtime]
+enabled = true
+port = 54323
+
+[studio]
+enabled = true
+port = 54323
+api_url = "http://localhost:54321"
+
+[inbucket]
+enabled = true
+port = 54324
+smtp_port = 54325
+pop3_port = 54326
+
+[storage]
+enabled = true
+port = 54325
+file_size_limit = "50MiB"
+image_transformation = true
+
+[analytics]
+enabled = true
+port = 54327
+
+[functions]
+enabled = true
+port = 54321
+
+[edge_runtime]
+enabled = true
+port = 54326
+
+# Project settings
+[project]
+name = "onion-classifieds"
+organization_id = "onion-classifieds-org"
+reference_id = "onion-classifieds-ref"
+
+# Database settings
+[db.settings]
+log_level = "warning"
+log_statement = "none"
+log_min_duration_statement = 1000

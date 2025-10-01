@@ -1,0 +1,139 @@
+<?php
+$title = 'Payment Required';
+ob_start();
+?>
+
+<div style="max-width: 600px; margin: 0 auto;">
+    <h1>Payment Required</h1>
+    
+    <div style="margin-bottom: 30px; padding: 20px; background-color: #e7f3ff; border-left: 4px solid #007bff; border-radius: 5px;">
+        <h3>Invoice Details</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+            <div>
+                <strong>Amount (USD):</strong><br>
+                $<?= number_format($invoice['fiat_amount'], 2) ?>
+            </div>
+            <div>
+                <strong>Currency:</strong><br>
+                <?= strtoupper($invoice['currency']) ?>
+            </div>
+            <div>
+                <strong>Crypto Amount:</strong><br>
+                <?= number_format($invoice['crypto_amount'], 8) ?> <?= strtoupper($invoice['currency']) ?>
+            </div>
+            <div>
+                <strong>Status:</strong><br>
+                <span style="padding: 2px 8px; border-radius: 3px; font-size: 12px; <?= $invoice['status'] === 'settled' ? 'background: #d4edda; color: #155724;' : ($invoice['status'] === 'processing' ? 'background: #fff3cd; color: #856404;' : 'background: #f8d7da; color: #721c24;') ?>">
+                    <?= ucfirst($invoice['status']) ?>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <?php if ($invoice['status'] === 'settled'): ?>
+        <!-- Payment Completed -->
+        <div style="text-align: center; padding: 40px; background: #d4edda; border-radius: 5px; margin-bottom: 30px;">
+            <h2 style="color: #155724; margin-bottom: 15px;">✅ Payment Completed!</h2>
+            <p style="color: #155724;">Your payment has been confirmed and processed successfully.</p>
+            
+            <?php 
+            $parts = explode(':', $invoice['purpose']);
+            if (count($parts) === 2 && $parts[0] === 'post_listing'): 
+            ?>
+                <a href="/listing/<?= $parts[1] ?>" style="display: inline-block; margin-top: 15px; padding: 12px 24px; background: #28a745; color: white; text-decoration: none; border-radius: 3px;">
+                    View Your Published Listing
+                </a>
+            <?php endif; ?>
+        </div>
+        
+    <?php elseif ($invoice['status'] === 'expired'): ?>
+        <!-- Payment Expired -->
+        <div style="text-align: center; padding: 40px; background: #f8d7da; border-radius: 5px; margin-bottom: 30px;">
+            <h2 style="color: #721c24; margin-bottom: 15px;">⏰ Payment Expired</h2>
+            <p style="color: #721c24;">This payment has expired. Please create a new listing to try again.</p>
+            
+            <a href="/create-listing" style="display: inline-block; margin-top: 15px; padding: 12px 24px; background: #007bff; color: white; text-decoration: none; border-radius: 3px;">
+                Create New Listing
+            </a>
+        </div>
+        
+    <?php else: ?>
+        <!-- Payment Pending -->
+        <div style="text-align: center; margin-bottom: 30px;">
+            <h2>Send Payment</h2>
+            <p>Send exactly <strong><?= number_format($invoice['crypto_amount'], 8) ?> <?= strtoupper($invoice['currency']) ?></strong> to the address below:</p>
+        </div>
+
+        <!-- Payment Address -->
+        <div style="margin-bottom: 30px; padding: 20px; background: #f8f9fa; border-radius: 5px; text-align: center;">
+            <h3>Payment Address</h3>
+            <div style="margin: 20px 0; padding: 15px; background: white; border: 2px dashed #007bff; border-radius: 5px; font-family: monospace; word-break: break-all; font-size: 14px;">
+                <?= htmlspecialchars($invoice['address_in']) ?>
+            </div>
+            
+            <!-- QR Code -->
+            <div style="margin: 20px 0;">
+                <img src="https://api.cryptapi.io/<?= strtolower($invoice['currency']) ?>/qrcode/?address=<?= urlencode($invoice['address_in']) ?>&value=<?= $invoice['crypto_amount'] ?>&size=300" 
+                     alt="Payment QR Code" 
+                     style="max-width: 300px; border: 1px solid #ddd; border-radius: 5px;">
+            </div>
+            
+            <div style="margin-top: 15px; font-size: 14px; color: #666;">
+                <p>Scan QR code with your <?= strtoupper($invoice['currency']) ?> wallet</p>
+                <p>Or copy the address above</p>
+            </div>
+        </div>
+
+        <!-- Payment Instructions -->
+        <div style="margin-bottom: 30px; padding: 20px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 5px;">
+            <h3>Payment Instructions</h3>
+            <ol>
+                <li>Send exactly <strong><?= number_format($invoice['crypto_amount'], 8) ?> <?= strtoupper($invoice['currency']) ?></strong></li>
+                <li>To address: <code><?= htmlspecialchars($invoice['address_in']) ?></code></li>
+                <li>Wait for <?= $invoice['confirmations_required'] ?> network confirmation<?= $invoice['confirmations_required'] > 1 ? 's' : '' ?></li>
+                <li>Your listing will be published automatically</li>
+            </ol>
+            
+            <div style="margin-top: 15px; font-size: 14px;">
+                <strong>⏰ Payment expires:</strong> <?= date('M j, Y \a\t g:i A', strtotime($invoice['expires_at'])) ?>
+            </div>
+        </div>
+
+        <!-- Status Check -->
+        <div style="text-align: center; margin-bottom: 30px;">
+            <button onclick="window.location.reload()" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer;">
+                🔄 Check Payment Status
+            </button>
+            
+            <div style="margin-top: 15px; font-size: 14px; color: #666;">
+                <p>This page will automatically update when payment is received</p>
+                <p>Current confirmations: <strong><?= $invoice['confirmations_received'] ?? 0 ?></strong> / <?= $invoice['confirmations_required'] ?></p>
+            </div>
+        </div>
+
+        <!-- Auto-refresh for pending payments -->
+        <?php if ($invoice['status'] === 'processing'): ?>
+            <meta http-equiv="refresh" content="30">
+            <div style="text-align: center; padding: 10px; background: #d1ecf1; border-radius: 3px; margin-bottom: 20px;">
+                <span>🔄 Checking for payment confirmation every 30 seconds...</span>
+            </div>
+        <?php endif; ?>
+    <?php endif; ?>
+
+    <!-- Support Information -->
+    <div style="margin-top: 40px; padding: 15px; background-color: #f8f9fa; border-radius: 5px;">
+        <h3>Need Help?</h3>
+        <ul>
+            <li>Make sure you send the exact amount shown above</li>
+            <li>Double-check the payment address</li>
+            <li>Network confirmations can take 10-60 minutes depending on the cryptocurrency</li>
+            <li>If you sent payment but it's not showing, please wait for network confirmations</li>
+            <li>Contact support if payment doesn't process within 2 hours</li>
+        </ul>
+    </div>
+</div>
+
+<?php
+$content = ob_get_clean();
+include __DIR__ . '/../layout/base.php';
+?>
