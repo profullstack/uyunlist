@@ -11,6 +11,7 @@ use App\Controllers\MessageController;
 use App\Controllers\PaymentController;
 use App\Controllers\AdminController;
 use App\Controllers\ImageController;
+use App\Controllers\CanaryController;
 use Exception;
 
 class Application
@@ -90,6 +91,9 @@ class Application
         $this->router->get('/', [HomeController::class, 'index']);
         $this->router->get('/category/{id}', [HomeController::class, 'category']);
         $this->router->get('/search', [HomeController::class, 'search']);
+        
+        // Warrant Canary
+        $this->router->get('/canary', [CanaryController::class, 'show']);
 
         // Authentication
         $this->router->get('/register', [AuthController::class, 'showRegister'], ['guest']);
