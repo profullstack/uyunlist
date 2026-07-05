@@ -39,7 +39,12 @@ class Database
         $username = $parsedUrl['user'] ?? '';
         $password = $parsedUrl['pass'] ?? '';
 
-        $dsn = "pgsql:host={$host};port={$port};dbname={$database};sslmode=require";
+        // Default to `prefer`: use SSL if the server offers it, else plain.
+        // The self-hosted Supabase Postgres runs on a private Docker network
+        // without TLS, so `require` would fail. Override with DB_SSLMODE for
+        // deployments where the DB is reached over an untrusted network.
+        $sslmode = $this->config->get('DB_SSLMODE') ?: 'prefer';
+        $dsn = "pgsql:host={$host};port={$port};dbname={$database};sslmode={$sslmode}";
 
         $options = [
             PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,

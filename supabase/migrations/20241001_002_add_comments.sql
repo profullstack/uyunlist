@@ -10,15 +10,28 @@ CREATE TABLE listing_comments (
     body TEXT NOT NULL,
     is_deleted BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW(),
-    
-    -- Prevent deeply nested comments (max 3 levels)
-    CONSTRAINT max_nesting_level CHECK (
-        parent_id IS NULL OR 
-        (SELECT COUNT(*) FROM listing_comments c2 
-         WHERE c2.id = parent_id AND c2.parent_id IS NOT NULL) = 0
-    )
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Prevent deeply nested comments: a reply's parent must be top-level (max 2
+-- levels). Postgres forbids subqueries in CHECK constraints, so enforce via a
+-- trigger.
+CREATE OR REPLACE FUNCTION enforce_comment_nesting()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.parent_id IS NOT NULL AND EXISTS (
+        SELECT 1 FROM listing_comments p
+        WHERE p.id = NEW.parent_id AND p.parent_id IS NOT NULL
+    ) THEN
+        RAISE EXCEPTION 'Comments can only be nested one level deep';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER listing_comment_nesting
+    BEFORE INSERT OR UPDATE ON listing_comments
+    FOR EACH ROW EXECUTE FUNCTION enforce_comment_nesting();
 
 -- Indexes for performance
 CREATE INDEX idx_listing_comments_listing_id ON listing_comments(listing_id);

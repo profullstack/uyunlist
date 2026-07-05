@@ -1,0 +1,46 @@
+# Forgejo Actions CI — runs on Codeberg's CI (docs.forgejo.org actions).
+# Validates the PHP app + the Docker/Supabase stack on every push and PR.
+name: ci
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  php:
+    runs-on: docker
+    container:
+      image: php:8.2-cli
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install composer
+        run: |
+          apt-get update && apt-get install -y git unzip curl
+          curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+      - name: Install dependencies (from lockfile)
+        run: composer install --no-interaction --prefer-dist --ignore-platform-reqs
+      - name: Lint (php -l) all source
+        run: find public src -name '*.php' -print0 | xargs -0 -n1 -P4 php -l
+      - name: Coding standard (PSR-12, non-blocking)
+        run: composer cs-check || true
+
+  stack:
+    runs-on: docker
+    container:
+      image: docker:27-cli
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tooling
+        run: apk add --no-cache bash openssl
+      - name: Generate .env (secrets + Supabase JWT keys)
+        run: bash scripts/generate-env.sh --force
+      - name: Validate docker-compose config
+        run: docker compose config -q
+      - name: Assert ANON_KEY / SERVICE_ROLE_KEY are present + JWT-shaped
+        run: |
+          set -a; . ./.env; set +a
+          for k in ANON_KEY SERVICE_ROLE_KEY; do
+            v="$(eval echo "\$$k")"
+            case "$v" in eyJ*.*.*) echo "$k ok" ;; *) echo "$k is not a JWT" >&2; exit 1 ;; esac
+          done

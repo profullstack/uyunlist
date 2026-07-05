@@ -14,7 +14,6 @@ Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
 Header always set Content-Security-Policy "default-src 'self'; script-src 'none'; object-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'none'; connect-src 'none'; media-src 'none'; frame-src 'none';"
 
 # Hide server information
-ServerTokens Prod
 Header unset Server
 Header unset X-Powered-By
 
@@ -67,4 +66,3 @@ RewriteRule ^(.*)$ index.php [QSA,L]
 Options -Indexes
 
 # Disable server signature
-ServerSignature Off

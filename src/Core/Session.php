@@ -21,9 +21,13 @@ class Session
 
     private function configureSession(): void
     {
-        // Configure session for security
+        // Configure session for security. Tor .onion services are served over
+        // HTTP (Tor provides the transport encryption), so a Secure cookie
+        // would never be sent and would silently break sessions/login. Only
+        // require Secure when the site is actually served over HTTPS.
+        $secure = str_starts_with((string)$this->config->get('APP_BASE_URL'), 'https://');
         ini_set('session.cookie_httponly', '1');
-        ini_set('session.cookie_secure', '1');
+        ini_set('session.cookie_secure', $secure ? '1' : '0');
         ini_set('session.cookie_samesite', 'Strict');
         ini_set('session.use_strict_mode', '1');
         ini_set('session.cookie_lifetime', (string)$this->config->get('SESSION_LIFETIME', 86400));

@@ -1,0 +1,55 @@
+# Forgejo Actions CD — push-to-deploy onto the DigitalOcean droplet.
+#
+# The droplet is *provisioned* with zero SSH via deploy/cloud-init.sh. This
+# workflow handles ongoing deploys: on every push to master it SSHes in and
+# pulls + rebuilds + migrates. It no-ops unless the deploy secrets are set, so
+# the repo still builds fine before you wire it up.
+#
+# Repo secrets (Settings → Actions → Secrets):
+#   DEPLOY_HOST     droplet IP or hostname
+#   DEPLOY_USER     ssh user (default: root)
+#   DEPLOY_SSH_KEY  a private key whose public half is in the droplet's
+#                   ~/.ssh/authorized_keys (add it once via cloud-init or the
+#                   DO console — this key is only for CD, not for setup)
+name: deploy
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: docker
+    container:
+      image: alpine:3.20
+    steps:
+      - name: Check secrets
+        id: gate
+        run: |
+          if [ -z "${{ secrets.DEPLOY_HOST }}" ] || [ -z "${{ secrets.DEPLOY_SSH_KEY }}" ]; then
+            echo "Deploy secrets not set — skipping (this is fine)."
+            echo "go=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "go=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Deploy over SSH
+        if: steps.gate.outputs.go == 'true'
+        env:
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          USER: ${{ secrets.DEPLOY_USER }}
+          KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          apk add --no-cache openssh-client
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/id && chmod 600 ~/.ssh/id
+          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          ssh -i ~/.ssh/id "${USER:-root}@$HOST" bash -s <<'REMOTE'
+            set -e
+            cd /opt/uyunlist
+            git fetch --depth=1 origin master
+            git reset --hard origin/master
+            docker compose up -d --build
+            bash scripts/apply-migrations.sh || true
+            echo "Deployed: $(git rev-parse --short HEAD)"
+          REMOTE

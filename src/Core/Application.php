@@ -170,7 +170,7 @@ class Application
         }
     }
 
-    private function executeController(callable|string $handler, array $params): void
+    private function executeController(callable|string|array $handler, array $params): void
     {
         if (is_string($handler)) {
             // Handle "ControllerClass::method" format

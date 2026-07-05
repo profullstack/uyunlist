@@ -17,6 +17,7 @@ class Config
     {
         // Database
         $this->config['DATABASE_URL'] = $_ENV['DATABASE_URL'] ?? '';
+        $this->config['DB_SSLMODE'] = $_ENV['DB_SSLMODE'] ?? 'prefer';
         
         // Application
         $this->config['APP_SECRET'] = $_ENV['APP_SECRET'] ?? '';

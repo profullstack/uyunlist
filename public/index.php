@@ -11,8 +11,9 @@ use App\Core\Router;
 use App\Core\Session;
 
 // Load environment variables
+// In Docker the environment is provided by compose; a .env file is optional.
 $dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/..');
-$dotenv->load();
+$dotenv->safeLoad();
 
 // Initialize configuration
 $config = new Config();
@@ -41,7 +42,7 @@ try {
     $database = new Database($config);
     
     // Initialize session management
-    $session = new Session($config);
+    $session = new Session($config, $database);
     
     // Initialize router
     $router = new Router();
@@ -52,7 +53,7 @@ try {
     // Run the application
     $app->run();
     
-} catch (Exception $e) {
+} catch (\Throwable $e) {
     // Log error (implement proper logging)
     error_log('Application error: ' . $e->getMessage());
     

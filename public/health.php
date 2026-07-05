@@ -43,7 +43,8 @@ if (isset($_ENV['DATABASE_URL']) && !empty($_ENV['DATABASE_URL'])) {
             $username = $parsedUrl['user'] ?? '';
             $password = $parsedUrl['pass'] ?? '';
 
-            $dsn = "pgsql:host={$host};port={$port};dbname={$database};sslmode=require";
+            $sslmode = $_ENV['DB_SSLMODE'] ?? 'prefer';
+            $dsn = "pgsql:host={$host};port={$port};dbname={$database};sslmode={$sslmode}";
             
             $pdo = new PDO($dsn, $username, $password, [
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,

@@ -1,0 +1,17 @@
+# Keep secrets and host state out of the image. The app reads its config from
+# docker-compose `environment:` at runtime, NOT from a baked-in .env (a baked
+# .env with unquoted spaces also breaks phpdotenv). Compose still reads the
+# root .env on the host for ${VAR} interpolation.
+.env
+.env.*
+!.env.example
+.git
+.gitignore
+volumes/db
+volumes/storage
+volumes/logs/*.log
+ONION_ADDRESS.txt
+vendor
+node_modules
+*.md
+tests
