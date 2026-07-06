@@ -406,10 +406,21 @@ services:
       - logs_data:/var/www/html/logs:Z
 
   # Tor Hidden Service
+  #
+  # The hidden-service keys (which fix the .onion address) live under
+  # /var/lib/tor/hidden_service. That path is backed by the `tor_data` volume;
+  # on the droplet the volume is bind-mounted onto the attached block storage
+  # (see deploy/docker-compose.volume.yml + TOR_DATA_DIR) so the address
+  # survives container/stack/droplet rebuilds.
+  #
+  # We start as root and let a tiny wrapper create + chown the key dir (tor
+  # refuses a HiddenServiceDir it doesn't own, and a fresh bind mount is
+  # root-owned), then exec tor which drops to the `tor` user per torrc.
   tor:
     container_name: onion-classifieds-tor
     image: alpine/tor:latest
     restart: unless-stopped
+    user: root
     depends_on:
       app:
         condition: service_started
@@ -417,7 +428,13 @@ services:
       - ./tor/torrc:/etc/tor/torrc:ro
       - tor_data:/var/lib/tor:Z
       - tor_logs:/var/log/tor:Z
-    command: ["tor", "-f", "/etc/tor/torrc"]
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >
+        mkdir -p /var/lib/tor/hidden_service /var/log/tor &&
+        chown -R tor:tor /var/lib/tor /var/log/tor &&
+        chmod 700 /var/lib/tor/hidden_service &&
+        exec tor -f /etc/tor/torrc
     networks:
       - default
 

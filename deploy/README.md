@@ -1,32 +1,65 @@
-# Deploying to a DigitalOcean droplet (zero-touch)
+# Deploying to a DigitalOcean droplet
 
 The whole stack — self-hosted **Supabase** + the **PHP SSR app** + a **Tor**
-hidden service — comes up on a fresh droplet **without you ever SSHing in**.
+hidden service — is stood up by one idempotent script,
+[`deploy/provision.sh`](provision.sh). There are no manual steps on the box.
 
-## 1. Create the droplet
+Everything runs through that one script, so all paths do the same thing and are
+safe to re-run:
+
+1. installs Docker + Compose and `git` (skipped if present),
+2. creates the **`ubuntu`** sudo/docker user (copying root's SSH key) so
+   `ubuntu@<host>` works,
+3. **persists the Tor hidden-service keys on the attached block volume**
+   (`/mnt/unyunvolume/tor`) so the **`.onion` address is permanent** — it
+   survives `docker compose down`, a full rebuild, and even reattaching the
+   volume to a new droplet,
+4. clones this repo to `/opt/uyunlist` and runs `scripts/generate-env.sh` → a
+   complete `.env` (random secrets + correctly-signed Supabase `ANON_KEY` /
+   `SERVICE_ROLE_KEY` JWTs). **Idempotent — an existing `.env` is left alone.**
+5. `docker compose up -d --build` (Supabase + app + Tor),
+6. `scripts/apply-migrations.sh` → creates the app schema,
+7. reads the generated **`.onion`**, writes it into `APP_BASE_URL` / `SITE_URL`,
+   recreates the app.
+
+Progress is logged to `/var/log/uyunlist-setup.log`; the onion address to
+`/opt/uyunlist/ONION_ADDRESS.txt`.
+
+## Option A — deploy from your workstation (recommended)
+
+```bash
+./deploy/setup.sh                          # → root@137.184.123.182 (default)
+SSH_TARGET=root@1.2.3.4 ./deploy/setup.sh  # some other host
+REPO_BRANCH=my-branch ./deploy/setup.sh    # deploy a specific branch
+```
+
+`setup.sh` SSHes in and runs `provision.sh` over the connection. The first run
+must connect as root (or a passwordless sudoer) to install Docker + create the
+user; afterwards `ubuntu@<host>` works too (`SSH_TARGET=ubuntu@<host>`).
+
+## Option B — zero-touch on droplet creation (user-data)
 
 - **Image:** Ubuntu 24.04 LTS
 - **Size:** ≥ 4 GB RAM / 2 vCPU (the full Supabase stack is memory-hungry)
+- **Attach a block-storage volume**, mounted at `/mnt/unyunvolume` (this is
+  where the `.onion` keys are persisted).
 - **Advanced → Add Initialization scripts (user data):** paste the entire
-  contents of [`deploy/cloud-init.sh`](cloud-init.sh).
-
-That's it. On first boot the script (running as root, no login required):
-
-1. installs Docker + Compose,
-2. clones this repo to `/opt/uyunlist`,
-3. runs `scripts/generate-env.sh` → a complete `.env` with random secrets and
-   correctly-signed Supabase `ANON_KEY` / `SERVICE_ROLE_KEY` JWTs,
-4. `docker compose up -d --build` (Supabase + app + Tor),
-5. `scripts/apply-migrations.sh` → creates the app schema,
-6. reads the generated **`.onion`** address, writes it into `APP_BASE_URL` /
-   `SITE_URL`, and recreates the app.
-
-Progress is logged to `/var/log/uyunlist-setup.log`. The onion address is
-written to `/opt/uyunlist/ONION_ADDRESS.txt`.
+  contents of [`deploy/cloud-init.sh`](cloud-init.sh) — a thin bootstrap that
+  fetches and runs `provision.sh`. No SSH login required.
 
 > The repo must be reachable by `git clone`. If it's private, set `REPO_URL` at
-> the top of the script to an authenticated URL (deploy token). The droplet
-> itself still needs no SSH login.
+> the top of the script to an authenticated URL (deploy token).
+
+### Where the .onion keys live
+
+The `tor` service keeps its keys under `/var/lib/tor/hidden_service`. Normally
+that's a Docker-managed volume on the root disk; on the droplet,
+[`deploy/docker-compose.volume.yml`](docker-compose.volume.yml) rebinds it onto
+the attached block volume at `${TOR_DATA_DIR}` (default `/mnt/unyunvolume/tor`).
+`provision.sh` wires that override in by writing
+`COMPOSE_FILE=docker-compose.yml:deploy/docker-compose.volume.yml` into `.env`,
+so every `docker compose` command on the box uses it automatically. To rotate
+the address, stop the stack and delete `/mnt/unyunvolume/tor/hidden_service`.
 
 ## 2. Set the real payment config (before going live)
 

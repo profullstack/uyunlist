@@ -1,0 +1,21 @@
+# Compose override that pins the Tor hidden-service keys onto the droplet's
+# attached block-storage volume instead of a Docker-managed volume on the root
+# disk. This is what makes the .onion address persist across `docker compose
+# down`, a full stack rebuild, or even reattaching the volume to a new droplet.
+#
+# It redefines the `tor_data` volume as a bind mount to ${TOR_DATA_DIR} (set to
+# the volume path, e.g. /mnt/unyunvolume/tor). The directory must already exist
+# on the host — deploy/provision.sh creates it.
+#
+# It is NOT part of the default stack: provision.sh wires it in by writing
+#   COMPOSE_FILE=docker-compose.yml:deploy/docker-compose.volume.yml
+# into .env, so every `docker compose` invocation on the droplet picks it up.
+# Local dev / CI use the base docker-compose.yml alone (plain Docker volume).
+
+volumes:
+  tor_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${TOR_DATA_DIR:?set TOR_DATA_DIR to the block-volume tor path, e.g. /mnt/unyunvolume/tor}
