@@ -100,25 +100,16 @@ ob_start();
             </div>
         </div>
 
-        <!-- Status Check -->
+        <!-- Live status panel: a no-JS iframe that meta-refreshes every 5s and
+             polls for the payment. When it lands, it links you to your listing. -->
         <div style="text-align: center; margin-bottom: 30px;">
-            <button onclick="window.location.reload()" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer;">
-                🔄 Check Payment Status
-            </button>
-            
-            <div style="margin-top: 15px; font-size: 14px; color: #666;">
-                <p>This page will automatically update when payment is received</p>
-                <p>Current confirmations: <strong><?= $invoice['confirmations_received'] ?? 0 ?></strong> / <?= $invoice['confirmations_required'] ?></p>
+            <iframe src="/pay/<?= (int)$invoice['id'] ?>/status" title="Payment status"
+                    style="width: 100%; max-width: 420px; height: 96px; border: 1px solid #ddd; border-radius: 5px; background: #fff;"></iframe>
+            <div style="margin-top: 12px; font-size: 14px; color: #666;">
+                <p>This panel checks for your payment automatically every 5 seconds.</p>
+                <p><a href="/pay/<?= (int)$invoice['id'] ?>">Reload this page</a></p>
             </div>
         </div>
-
-        <!-- Auto-refresh for pending payments -->
-        <?php if ($invoice['status'] === 'processing'): ?>
-            <meta http-equiv="refresh" content="30">
-            <div style="text-align: center; padding: 10px; background: #d1ecf1; border-radius: 3px; margin-bottom: 20px;">
-                <span>🔄 Checking for payment confirmation every 30 seconds...</span>
-            </div>
-        <?php endif; ?>
     <?php endif; ?>
 
     <!-- Support Information -->

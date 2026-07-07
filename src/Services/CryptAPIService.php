@@ -274,6 +274,39 @@ class CryptAPIService
         return ['checked' => $checked, 'settled' => $settled];
     }
 
+    /**
+     * Poll CoinPay for a single invoice and settle it if paid. Returns the
+     * resulting status. Used by the auto-refreshing payment status panel so a
+     * confirmation is picked up within seconds (not just by the minute cron).
+     */
+    public function checkAndSettleInvoice(int $invoiceId): string
+    {
+        $invoice = $this->getInvoice($invoiceId);
+        if (!$invoice) {
+            return 'not_found';
+        }
+        if ($invoice['status'] === 'settled') {
+            return 'settled';
+        }
+
+        $meta = json_decode((string)($invoice['webhook_raw'] ?? ''), true);
+        $coinpayId = is_array($meta) ? (string)($meta['coinpay_id'] ?? '') : '';
+        if ($coinpayId !== '') {
+            $coinpay = new CoinpayService($this->config, $this->database);
+            if ($coinpay->isEnabled()) {
+                try {
+                    if ($coinpay->isPaidStatus($coinpay->getStatus($coinpayId))) {
+                        $this->markInvoicePaid($invoiceId);
+                        return 'settled';
+                    }
+                } catch (Exception $e) {
+                    error_log('checkAndSettleInvoice failed: ' . $e->getMessage());
+                }
+            }
+        }
+        return (string)$invoice['status'];
+    }
+
     public function getInvoice(int $invoiceId): ?array
     {
         return $this->database->queryOne('SELECT * FROM invoices WHERE id = ?', [$invoiceId]);

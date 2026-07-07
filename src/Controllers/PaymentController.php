@@ -26,6 +26,36 @@ class PaymentController extends BaseController
         $this->json(['success' => true] + $result);
     }
 
+    /**
+     * Standalone, no-JS status panel loaded in an iframe on the pay page. It
+     * meta-refreshes every 5s and polls CoinPay on each load, so payment is
+     * detected within seconds. Rendered without the site layout (lightweight).
+     */
+    public function paymentStatus(array $params): void
+    {
+        $invoiceId = (int)$params['invoiceId'];
+        $userId = $this->session->getUserId();
+
+        $svc = new CryptAPIService($this->config, $this->database);
+        $invoice = $svc->getInvoice($invoiceId);
+        if (!$invoice || $invoice['user_id'] !== $userId) {
+            throw new Exception('Invoice not found', 404);
+        }
+
+        // Opportunistically settle via CoinPay, then reload the fresh row.
+        $status = $svc->checkAndSettleInvoice($invoiceId);
+        $invoice = $svc->getInvoice($invoiceId);
+
+        $listingId = 0;
+        $parts = explode(':', (string)$invoice['purpose']);
+        if (count($parts) === 2 && $parts[0] === 'post_listing') {
+            $listingId = (int)$parts[1];
+        }
+
+        // Render the standalone fragment directly (no base layout).
+        include __DIR__ . '/../../templates/payments/status.php';
+    }
+
     public function showPayment(array $params): void
     {
         $invoiceId = (int)$params['invoiceId'];

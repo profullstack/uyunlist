@@ -130,6 +130,7 @@ class Application
 
         // Payments
         $this->router->get('/pay/{invoiceId}', [PaymentController::class, 'showPayment'], ['auth']);
+        $this->router->get('/pay/{invoiceId}/status', [PaymentController::class, 'paymentStatus'], ['auth']);
         $this->router->get('/pay-to-publish/{listingId}', [PaymentController::class, 'payToPublish'], ['auth']);
         $this->router->get('/bump-listing/{listingId}', [PaymentController::class, 'bumpListing'], ['auth']);
         $this->router->post('/create-invoice', [PaymentController::class, 'createInvoice'], ['auth', 'csrf']);
