@@ -163,7 +163,7 @@ if [ -n "$ONION" ]; then
   log "Onion address: http://$ONION"
   set_env APP_BASE_URL "http://$ONION"
   set_env SITE_URL "http://$ONION"
-  docker compose up -d app auth
+  docker compose up -d app
   echo "http://$ONION" > "$APP_DIR/ONION_ADDRESS.txt"
   chown "$APP_USER:$APP_USER" "$APP_DIR/ONION_ADDRESS.txt"
 else
