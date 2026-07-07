@@ -64,24 +64,33 @@ ob_start();
             <p>Send exactly <strong><?= number_format($invoice['crypto_amount'], 8) ?> <?= strtoupper($invoice['currency']) ?></strong> to the address below:</p>
         </div>
 
-        <!-- Payment Address -->
+        <!-- Payment: amount, QR, address -->
         <div style="margin-bottom: 30px; padding: 20px; background: #f8f9fa; border-radius: 5px; text-align: center;">
-            <h3>Payment Address</h3>
-            <div style="margin: 20px 0; padding: 15px; background: white; border: 2px dashed #007bff; border-radius: 5px; font-family: monospace; word-break: break-all; font-size: 14px;">
+            <h3>Send exactly</h3>
+            <div style="font-size: 22px; font-weight: bold; margin-bottom: 15px;">
+                <?= htmlspecialchars(rtrim(rtrim(number_format((float)$invoice['crypto_amount'], 8, '.', ''), '0'), '.')) ?>
+                <?= htmlspecialchars(strtoupper($invoice['currency'])) ?>
+            </div>
+
+            <!-- QR: server-rendered SVG served by the onion (no JS, no external) -->
+            <div style="margin: 0 auto 15px; max-width: 260px;">
+                <img src="/pay/<?= (int)$invoice['id'] ?>/qr" alt="Payment QR code"
+                     style="width: 100%; height: auto; background: #fff; border: 1px solid #ddd; border-radius: 5px; padding: 8px;">
+            </div>
+
+            <div style="font-size: 13px; color:#666; margin-bottom: 6px;">Send to this address:</div>
+            <div style="padding: 12px; background: white; border: 2px dashed #007bff; border-radius: 5px; font-family: monospace; word-break: break-all; font-size: 14px;">
                 <?= htmlspecialchars($invoice['address_in']) ?>
             </div>
-            
             <?php
-            // Self-contained wallet URI (no external image — an onion page must
-            // not load off-site resources).
             $cur = strtolower($invoice['currency']);
             $amt = rtrim(rtrim(number_format((float)$invoice['crypto_amount'], 18, '.', ''), '0'), '.');
             $scheme = ['btc' => 'bitcoin', 'eth' => 'ethereum', 'doge' => 'dogecoin', 'xmr' => 'monero', 'sol' => 'solana'][$cur] ?? $cur;
             $amtParam = $cur === 'xmr' ? 'tx_amount' : ($cur === 'eth' ? 'value' : 'amount');
             $uri = "{$scheme}:{$invoice['address_in']}?{$amtParam}={$amt}";
             ?>
-            <div style="margin-top: 15px; font-size: 14px; color: #666;">
-                <p><a href="<?= htmlspecialchars($uri) ?>">Open in your <?= strtoupper($invoice['currency']) ?> wallet</a>, or copy the address above.</p>
+            <div style="margin-top: 12px; font-size: 14px;">
+                <a href="<?= htmlspecialchars($uri) ?>">Open in your <?= strtoupper($invoice['currency']) ?> wallet</a>
             </div>
         </div>
 

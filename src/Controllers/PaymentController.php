@@ -72,6 +72,38 @@ class PaymentController extends BaseController
         include __DIR__ . '/../../templates/payments/status.php';
     }
 
+    /**
+     * Server-rendered QR of the payment URI, as SVG (no JS, no external image —
+     * served by the onion itself). Owner-only.
+     */
+    public function paymentQr(array $params): void
+    {
+        $invoiceId = (int)$params['invoiceId'];
+        $userId = $this->session->getUserId();
+
+        $invoice = (new CryptAPIService($this->config, $this->database))->getInvoice($invoiceId);
+        if (!$invoice || $invoice['user_id'] !== $userId) {
+            throw new Exception('Invoice not found', 404);
+        }
+
+        $cur = strtolower((string)$invoice['currency']);
+        $amt = rtrim(rtrim(number_format((float)$invoice['crypto_amount'], 18, '.', ''), '0'), '.');
+        $scheme = ['btc' => 'bitcoin', 'eth' => 'ethereum', 'doge' => 'dogecoin', 'xmr' => 'monero', 'sol' => 'solana'][$cur] ?? $cur;
+        $amtParam = $cur === 'xmr' ? 'tx_amount' : ($cur === 'eth' ? 'value' : 'amount');
+        $uri = "{$scheme}:{$invoice['address_in']}?{$amtParam}={$amt}";
+
+        $options = new \chillerlan\QRCode\QROptions([
+            'outputType'  => \chillerlan\QRCode\Output\QROutputInterface::MARKUP_SVG,
+            'eccLevel'    => \chillerlan\QRCode\Common\EccLevel::M,
+            'addQuietzone' => true,
+            'svgViewBoxSize' => 0,
+        ]);
+
+        header('Content-Type: image/svg+xml');
+        header('Cache-Control: private, max-age=300');
+        echo (new \chillerlan\QRCode\QRCode($options))->render($uri);
+    }
+
     public function showPayment(array $params): void
     {
         $invoiceId = (int)$params['invoiceId'];
@@ -125,7 +157,8 @@ class PaymentController extends BaseController
         ], $data);
 
         if (!empty($errors)) {
-            $this->json(['success' => false, 'errors' => $errors], 400);
+            $this->setFlash('error', 'Please choose a valid payment option and amount.');
+            $this->redirectBack('/my-listings');
             return;
         }
 
@@ -155,18 +188,13 @@ class PaymentController extends BaseController
                 $exchangeRate
             );
 
-            $this->json([
-                'success' => true,
-                'invoice' => $invoice,
-                'redirect_url' => '/pay/' . $invoice['invoice_id']
-            ]);
+            // No-JS: redirect straight to the payment page.
+            $this->redirect('/pay/' . $invoice['invoice_id']);
 
         } catch (Exception $e) {
             error_log('Invoice creation failed: ' . $e->getMessage());
-            $this->json([
-                'success' => false,
-                'error' => 'Failed to create payment invoice. Please try again.'
-            ], 500);
+            $this->setFlash('error', 'Failed to create payment invoice. Please try again.');
+            $this->redirectBack('/my-listings');
         }
     }
 

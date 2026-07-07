@@ -14,8 +14,8 @@ ob_start();
             <p style="color: #666; margin: 10px 0;">
                 <?= htmlspecialchars(substr($listing['body'], 0, 200)) ?><?= strlen($listing['body']) > 200 ? '...' : '' ?>
             </p>
-            <?php if ($listing['price_sats'] > 0): ?>
-                <p><strong>Price:</strong> <?= number_format($listing['price_sats'] / 100000000, 8) ?> BTC</p>
+            <?php if ((int)($listing['price_usd_cents'] ?? 0) > 0): ?>
+                <p><strong>Price:</strong> <?= htmlspecialchars(\App\Core\Price::label($listing)) ?></p>
             <?php endif; ?>
             <?php if (!empty($listing['location'])): ?>
                 <p><strong>Location:</strong> <?= htmlspecialchars($listing['location']) ?></p>
