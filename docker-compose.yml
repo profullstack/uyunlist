@@ -418,7 +418,9 @@ services:
   # root-owned), then exec tor which drops to the `tor` user per torrc.
   tor:
     container_name: onion-classifieds-tor
-    image: alpine/tor:latest
+    build:
+      context: ./tor
+      dockerfile: Dockerfile
     restart: unless-stopped
     user: root
     depends_on:
