@@ -98,9 +98,13 @@ class PaymentController extends BaseController
             'outputBase64'    => false, // raw <svg> markup, not a data: URI
         ]);
 
+        $svg = (new \chillerlan\QRCode\QRCode($options))->render($uri);
+        // Give the SVG an explicit size so it renders reliably inside <img>.
+        $svg = preg_replace('/<svg /', '<svg width="256" height="256" ', $svg, 1);
+
         header('Content-Type: image/svg+xml');
         header('Cache-Control: private, max-age=300');
-        echo (new \chillerlan\QRCode\QRCode($options))->render($uri);
+        echo $svg;
     }
 
     public function showPayment(array $params): void

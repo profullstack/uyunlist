@@ -29,13 +29,13 @@ if ($config->get('APP_DEBUG', false)) {
 
 // Security headers
 header('X-Content-Type-Options: nosniff');
-header('X-Frame-Options: DENY');
+header('X-Frame-Options: SAMEORIGIN');
 header('X-XSS-Protection: 1; mode=block');
 header('Referrer-Policy: no-referrer');
 header('Permissions-Policy: geolocation=(), microphone=(), camera=()');
 
 // Content Security Policy - strict for Tor Browser compatibility
-header("Content-Security-Policy: default-src 'self'; script-src 'none'; object-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'none'; connect-src 'none'; media-src 'none'; frame-src 'none';");
+header("Content-Security-Policy: default-src 'self'; script-src 'none'; object-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'none'; connect-src 'none'; media-src 'none'; frame-src 'self'; frame-ancestors 'self';");
 
 try {
     // Initialize database connection
