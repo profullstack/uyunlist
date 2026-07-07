@@ -41,9 +41,14 @@ class ListingController extends BaseController
             [$listingId]
         );
 
-        // Get threaded comments
-        $commentController = new \App\Controllers\CommentController($this->config, $this->database, $this->session, $this->router);
-        $comments = $commentController->getThreadedComments($listingId);
+        // Get threaded comments (non-critical — never let it break the page).
+        try {
+            $commentController = new \App\Controllers\CommentController($this->config, $this->database, $this->session, $this->router);
+            $comments = $commentController->getThreadedComments($listingId);
+        } catch (\Exception $e) {
+            error_log('Comments load failed: ' . $e->getMessage());
+            $comments = [];
+        }
 
         // Increment view count
         $this->database->execute(
