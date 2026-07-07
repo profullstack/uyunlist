@@ -10,6 +10,7 @@ use App\Controllers\ListingController;
 use App\Controllers\MessageController;
 use App\Controllers\PaymentController;
 use App\Controllers\AdminController;
+use App\Controllers\MembersController;
 use App\Controllers\ImageController;
 use App\Controllers\CanaryController;
 use Exception;
@@ -104,6 +105,7 @@ class Application
 
         // User profile
         $this->router->get('/profile', [AuthController::class, 'showProfile'], ['auth']);
+        $this->router->get('/members', [MembersController::class, 'index'], ['auth']);
         $this->router->post('/profile', [AuthController::class, 'updateProfile'], ['auth', 'csrf']);
 
         // Listings

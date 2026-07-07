@@ -143,6 +143,16 @@ class AdminController extends BaseController
                 $this->database->update('users', ['is_admin' => false], ['id' => $id]);
                 $this->setFlash('success', 'Admin access removed.');
                 break;
+            case 'user_delete':
+                if ($id === $adminId) {
+                    $this->setFlash('error', "You can't delete your own account here.");
+                    break;
+                }
+                // FKs cascade (listings, messages, conversations, invoices,
+                // sessions) so this cleans up all of the user's content.
+                $this->database->delete('users', ['id' => $id]);
+                $this->setFlash('success', 'User deleted.');
+                break;
             case 'report_resolve':
             case 'report_dismiss':
                 $status = $action === 'report_resolve' ? 'resolved' : 'dismissed';

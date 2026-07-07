@@ -225,6 +225,7 @@
                     <a href="/create-listing">Post Listing</a>
                     <a href="/my-listings">My Listings</a>
                     <a href="/messages">Messages</a>
+                    <a href="/members">Members</a>
                 <?php endif; ?>
                 <?php if ($current_user && $current_user['is_admin']): ?>
                     <a href="/admin">Admin</a>

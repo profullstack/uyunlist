@@ -38,6 +38,16 @@ ob_start();
                         <input type="hidden" name="id" value="<?= (int)$u['id'] ?>">
                         <button type="submit">Remove admin</button>
                     </form>
+                <?php endif; ?>
+                <?php if ((int)$u['id'] !== (int)$me): ?>
+                    <form method="post" action="/admin/moderate" style="display:inline;"
+                          onsubmit="return confirm('Delete <?= htmlspecialchars($u['handle'], ENT_QUOTES) ?> and ALL their listings/messages? This cannot be undone.');">
+                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
+                        <input type="hidden" name="redirect" value="/admin/users">
+                        <input type="hidden" name="action" value="user_delete">
+                        <input type="hidden" name="id" value="<?= (int)$u['id'] ?>">
+                        <button type="submit" style="color:#b00;">Delete</button>
+                    </form>
                 <?php else: ?>
                     <em>you</em>
                 <?php endif; ?>
