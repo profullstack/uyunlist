@@ -63,7 +63,7 @@ RUN echo "expose_php = Off" >> /usr/local/etc/php/conf.d/security.ini \
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost/health || exit 1
+    CMD curl -f http://localhost/health.php || exit 1
 
 # Expose port 80
 EXPOSE 80
