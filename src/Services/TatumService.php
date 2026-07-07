@@ -29,26 +29,129 @@ class TatumService
     public function getExchangeRate(string $fromCurrency, string $toCurrency): float
     {
         $cacheKey = strtoupper($fromCurrency) . '_' . strtoupper($toCurrency);
-        
-        // Check cache first
-        if (isset($this->rateCache[$cacheKey])) {
-            $cached = $this->rateCache[$cacheKey];
-            if (time() - $cached['timestamp'] < $this->cacheLifetime) {
-                return $cached['rate'];
-            }
+
+        // Fresh in the in-memory cache?
+        if ($this->cacheFresh($cacheKey)) {
+            return $this->rateCache[$cacheKey]['rate'];
         }
 
-        // Fetch fresh rate: use Tatum if a real API key is configured, else
-        // fall back to keyless CoinGecko so rates work out of the box.
-        $rate = $this->fetchRate($fromCurrency, $toCurrency);
-        
-        // Cache the result
-        $this->rateCache[$cacheKey] = [
-            'rate' => $rate,
-            'timestamp' => time()
-        ];
+        // Warm the in-memory cache from the shared file cache (survives across
+        // requests, so we don't hammer the rate API and trip its 429 limit).
+        $this->loadFileCache();
+        if ($this->cacheFresh($cacheKey)) {
+            return $this->rateCache[$cacheKey]['rate'];
+        }
 
-        return $rate;
+        // On a miss, refresh ALL supported rates in one shot (CoinGecko lets us
+        // fetch every coin in a single request) and persist to the file cache.
+        if ($this->usingTatum()) {
+            $this->cacheSet($cacheKey, $this->fetchRateFromTatum($fromCurrency, $toCurrency));
+        } else {
+            foreach ($this->fetchAllFromCoinGecko() as $code => $rate) {
+                $this->cacheSet('USD_' . $code, $rate);
+            }
+        }
+        $this->saveFileCache();
+
+        if ($this->cacheFresh($cacheKey)) {
+            return $this->rateCache[$cacheKey]['rate'];
+        }
+        throw new Exception("Exchange rate unavailable for {$toCurrency}");
+    }
+
+    private function usingTatum(): bool
+    {
+        $key = (string)$this->config->get('TATUM_API_KEY');
+        return $key !== '' && $key !== 'your-tatum-api-key';
+    }
+
+    private function cacheFresh(string $key): bool
+    {
+        return isset($this->rateCache[$key])
+            && (time() - $this->rateCache[$key]['timestamp'] < $this->cacheLifetime);
+    }
+
+    private function cacheSet(string $key, float $rate): void
+    {
+        $this->rateCache[$key] = ['rate' => $rate, 'timestamp' => time()];
+    }
+
+    private function cacheFile(): string
+    {
+        return sys_get_temp_dir() . '/uyunlist_rates.json';
+    }
+
+    private function loadFileCache(): void
+    {
+        $f = $this->cacheFile();
+        if (!is_file($f)) {
+            return;
+        }
+        $data = json_decode((string)file_get_contents($f), true);
+        if (is_array($data)) {
+            // Only take entries we don't already have fresher copies of.
+            foreach ($data as $key => $entry) {
+                if (isset($entry['rate'], $entry['timestamp']) && !$this->cacheFresh($key)) {
+                    $this->rateCache[$key] = $entry;
+                }
+            }
+        }
+    }
+
+    private function saveFileCache(): void
+    {
+        @file_put_contents($this->cacheFile(), json_encode($this->rateCache), LOCK_EX);
+    }
+
+    /**
+     * Fetch USD prices for all supported coins in ONE CoinGecko request.
+     * @return array<string,float> code => USD price
+     */
+    private function fetchAllFromCoinGecko(): array
+    {
+        $ids = [
+            'bitcoin' => 'BTC', 'monero' => 'XMR', 'ethereum' => 'ETH',
+            'solana' => 'SOL', 'dogecoin' => 'DOGE',
+        ];
+        $url = 'https://api.coingecko.com/api/v3/simple/price?ids='
+            . implode(',', array_keys($ids)) . '&vs_currencies=usd';
+
+        $ch = curl_init();
+        curl_setopt_array($ch, [
+            CURLOPT_URL => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 10,
+            CURLOPT_CONNECTTIMEOUT => 5,
+            CURLOPT_HTTPHEADER => ['Accept: application/json'],
+            CURLOPT_USERAGENT => 'OnionClassifieds/1.0',
+        ]);
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_error($ch);
+        curl_close($ch);
+
+        if ($response === false) {
+            throw new Exception('cURL error: ' . $error);
+        }
+        if ($httpCode !== 200) {
+            throw new Exception("CoinGecko API error: HTTP {$httpCode}");
+        }
+        $data = json_decode($response, true);
+        if (!is_array($data)) {
+            throw new Exception('Invalid JSON from CoinGecko');
+        }
+
+        $out = [];
+        foreach ($ids as $id => $code) {
+            $rate = (float)($data[$id]['usd'] ?? 0);
+            if ($rate > 0) {
+                $out[$code] = $rate;
+            }
+        }
+        if (empty($out)) {
+            throw new Exception('No rates returned by CoinGecko');
+        }
+        return $out;
     }
 
     /**

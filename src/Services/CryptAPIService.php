@@ -46,10 +46,11 @@ class CryptAPIService
             throw new Exception("Unsupported currency: {$currency}");
         }
 
-        // Get payout address for this currency
-        $payoutAddress = $this->config->getPayoutAddress($currency);
-        if (empty($payoutAddress)) {
-            throw new Exception("No payout address configured for {$currency}");
+        // Get payout address for this currency (falls back to the operator's
+        // imported wallet when PAYOUT_* env is unset/placeholder).
+        $payoutAddress = $this->resolvePayoutAddress($currency);
+        if ($payoutAddress === '') {
+            throw new Exception("No {$currency} payout address configured. Set your {$currency} wallet on your admin profile (or PAYOUT_{$currency}).");
         }
 
         // Get confirmations required
@@ -236,6 +237,28 @@ class CryptAPIService
      * @return array
      * @throws Exception
      */
+    /**
+     * The address to forward payments to: the configured PAYOUT_<coin> if it's
+     * a real value, otherwise the site operator's imported wallet (the first
+     * admin who has that coin's address set on their profile).
+     */
+    private function resolvePayoutAddress(string $currency): string
+    {
+        $addr = (string)$this->config->getPayoutAddress($currency);
+        if ($addr !== '' && !str_starts_with($addr, 'your-')) {
+            return $addr;
+        }
+
+        $col = 'wallet_' . strtolower($currency);
+        if (!in_array($col, ['wallet_btc', 'wallet_xmr', 'wallet_eth', 'wallet_sol', 'wallet_doge'], true)) {
+            return '';
+        }
+        $row = $this->database->queryOne(
+            "SELECT {$col} AS addr FROM users WHERE is_admin = true AND {$col} <> '' ORDER BY id ASC LIMIT 1"
+        );
+        return (string)($row['addr'] ?? '');
+    }
+
     private function callCryptAPI(string $currency, array $params): array
     {
         $currency = strtolower($currency);
