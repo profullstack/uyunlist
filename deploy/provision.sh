@@ -175,10 +175,13 @@ fi
 # Every minute, ask the app to poll CoinPay for open invoices. No-op until
 # COINPAY_API_KEY is set. Idempotent.
 chmod +x "$APP_DIR/scripts/poll-cron.sh" 2>/dev/null || true
-CRON_LINE="* * * * * $APP_DIR/scripts/poll-cron.sh"
-if ! crontab -l 2>/dev/null | grep -qF "poll-cron.sh"; then
-  log "Installing payment-poll cron"
-  (crontab -l 2>/dev/null; echo "$CRON_LINE") | crontab -
+chmod +x "$APP_DIR/scripts/refresh-prices-cron.sh" 2>/dev/null || true
+NEW_CRON=""
+crontab -l 2>/dev/null | grep -qF "poll-cron.sh" || NEW_CRON="$NEW_CRON* * * * * $APP_DIR/scripts/poll-cron.sh\n"
+crontab -l 2>/dev/null | grep -qF "refresh-prices-cron.sh" || NEW_CRON="$NEW_CRON0 * * * * $APP_DIR/scripts/refresh-prices-cron.sh\n"
+if [ -n "$NEW_CRON" ]; then
+  log "Installing cron jobs (payment poll + hourly price refresh)"
+  (crontab -l 2>/dev/null; printf "%b" "$NEW_CRON") | crontab -
 fi
 
 log "uyunlist provisioning finished $(date -u)"

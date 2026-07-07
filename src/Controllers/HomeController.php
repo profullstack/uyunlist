@@ -225,15 +225,15 @@ class HomeController extends BaseController
                 $params[] = '%' . $location . '%';
             }
 
-            // Price filters
+            // Price filters (USD)
             if ($minPrice !== null) {
-                $conditions[] = "l.price_sats >= ?";
-                $params[] = $minPrice * 100000000; // Convert to satoshis
+                $conditions[] = "l.price_usd_cents >= ?";
+                $params[] = (int)round($minPrice * 100);
             }
 
             if ($maxPrice !== null) {
-                $conditions[] = "l.price_sats <= ?";
-                $params[] = $maxPrice * 100000000; // Convert to satoshis
+                $conditions[] = "l.price_usd_cents <= ?";
+                $params[] = (int)round($maxPrice * 100);
             }
 
             if (!empty($conditions)) {

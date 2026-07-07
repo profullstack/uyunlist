@@ -19,8 +19,8 @@ $isDraft = !($listing['is_published'] ?? false);
     <div style="font-size:13px; text-transform:uppercase; color:#888; margin-bottom:8px;">Preview</div>
     <h2 style="margin:0 0 6px;"><?= $val('title') ?: '(no title)' ?></h2>
     <div style="color:#666; font-size:14px; margin-bottom:10px;">
-        <?php if (($listing['price_sats'] ?? '') !== '' && (float)$listing['price_sats'] > 0): ?>
-            <strong><?= htmlspecialchars(rtrim(rtrim(number_format((float)$listing['price_sats'], 8, '.', ''), '0'), '.')) ?> BTC</strong> ·
+        <?php if ((int)($listing['price_usd_cents'] ?? 0) > 0): ?>
+            <strong><?= htmlspecialchars(\App\Core\Price::label($listing)) ?></strong> ·
         <?php endif; ?>
         <?= $val('location') ? $val('location') . ' · ' : '' ?>
         <?php
@@ -78,11 +78,31 @@ $isDraft = !($listing['is_published'] ?? false);
         <?php if (isset($errors['body'])): ?><div class="error"><?= htmlspecialchars($errors['body']) ?></div><?php endif; ?>
     </div>
 
+    <?php
+    $allCoins = ['BTC' => 'Bitcoin', 'XMR' => 'Monero', 'ETH' => 'Ethereum', 'SOL' => 'Solana', 'DOGE' => 'Dogecoin'];
+    $myCoins = [];
+    foreach ($allCoins as $code => $name) {
+        if (!empty($current_user['wallet_' . strtolower($code)] ?? '')) { $myCoins[$code] = $name; }
+    }
+    if (empty($myCoins)) { $myCoins = $allCoins; }
+    $priceUsd = $old['price_usd'] ?? ((int)($listing['price_usd_cents'] ?? 0) > 0 ? number_format((int)$listing['price_usd_cents'] / 100, 2, '.', '') : '');
+    $selCoin = strtoupper((string)($old['price_currency'] ?? $listing['price_currency'] ?? $current_user['preferred_currency'] ?? ''));
+    ?>
     <div class="form-group">
-        <label for="price_sats">Price (BTC)</label>
-        <input type="number" id="price_sats" name="price_sats" step="0.00000001" min="0" value="<?= $val('price_sats') ?>">
-        <?php if (isset($errors['price_sats'])): ?><div class="error"><?= htmlspecialchars($errors['price_sats']) ?></div><?php endif; ?>
-        <small>Leave empty for free / contact for price.</small>
+        <label for="price_usd">Price (USD)</label>
+        <input type="number" id="price_usd" name="price_usd" step="0.01" min="0" value="<?= htmlspecialchars((string)$priceUsd) ?>" placeholder="e.g. 49.99">
+        <?php if (isset($errors['price_usd'])): ?><div class="error"><?= htmlspecialchars($errors['price_usd']) ?></div><?php endif; ?>
+        <small>Converted to crypto server-side (rates refresh hourly). Empty = free / contact for price.</small>
+    </div>
+
+    <div class="form-group">
+        <label for="price_currency">Paid in</label>
+        <select id="price_currency" name="price_currency">
+            <?php foreach ($myCoins as $code => $name): ?>
+                <option value="<?= $code ?>" <?= $selCoin === $code ? 'selected' : '' ?>><?= $code ?> (<?= $name ?>)</option>
+            <?php endforeach; ?>
+        </select>
+        <small>Set your wallets on your <a href="/profile">profile</a>.</small>
     </div>
 
     <div class="form-group">

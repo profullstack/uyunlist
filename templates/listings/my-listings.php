@@ -47,9 +47,9 @@ ob_start();
                         </div>
                         
                         <div style="margin-bottom: 10px;">
-                            <?php if ($listing['price_sats'] > 0): ?>
+                            <?php if ((int)($listing['price_usd_cents'] ?? 0) > 0): ?>
                                 <span style="font-weight: bold; color: #28a745;">
-                                    <?= number_format($listing['price_sats'] / 100000000, 8) ?> BTC
+                                    <?= htmlspecialchars(\App\Core\Price::label($listing)) ?>
                                 </span>
                             <?php else: ?>
                                 <span style="font-weight: bold; color: #28a745;">Free</span>

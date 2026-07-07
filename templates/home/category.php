@@ -94,8 +94,8 @@ ob_start();
                 </h3>
                 
                 <p class="price">
-                    <?php if ($listing['price_sats'] > 0): ?>
-                        <?= number_format($listing['price_sats'] / 100000000, 8) ?> BTC
+                    <?php if ((int)($listing['price_usd_cents'] ?? 0) > 0): ?>
+                        <?= htmlspecialchars(\App\Core\Price::label($listing)) ?>
                     <?php else: ?>
                         Free
                     <?php endif; ?>

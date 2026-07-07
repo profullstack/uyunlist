@@ -55,13 +55,32 @@ ob_start();
         <small>Provide detailed information about your item or service. Include condition, specifications, etc.</small>
     </div>
     
+    <?php
+    $allCoins = ['BTC' => 'Bitcoin', 'XMR' => 'Monero', 'ETH' => 'Ethereum', 'SOL' => 'Solana', 'DOGE' => 'Dogecoin'];
+    $myCoins = [];
+    foreach ($allCoins as $code => $name) {
+        if (!empty($current_user['wallet_' . strtolower($code)] ?? '')) { $myCoins[$code] = $name; }
+    }
+    if (empty($myCoins)) { $myCoins = $allCoins; }
+    $prefCoin = strtoupper((string)($old['price_currency'] ?? $current_user['preferred_currency'] ?? ''));
+    ?>
     <div class="form-group">
-        <label for="price_sats">Price (BTC)</label>
-        <input type="number" id="price_sats" name="price_sats" step="0.00000001" min="0" value="<?= htmlspecialchars($old['price_sats'] ?? '') ?>">
-        <?php if (isset($errors['price_sats'])): ?>
-            <div class="error"><?= htmlspecialchars($errors['price_sats']) ?></div>
+        <label for="price_usd">Price (USD)</label>
+        <input type="number" id="price_usd" name="price_usd" step="0.01" min="0" value="<?= htmlspecialchars($old['price_usd'] ?? '') ?>" placeholder="e.g. 49.99">
+        <?php if (isset($errors['price_usd'])): ?>
+            <div class="error"><?= htmlspecialchars($errors['price_usd']) ?></div>
         <?php endif; ?>
-        <small>Enter price in Bitcoin (BTC). Leave empty for free items or "contact for price".</small>
+        <small>Enter the price in USD — it's converted to crypto on the server (rates refresh hourly). Leave empty for free / "contact for price".</small>
+    </div>
+
+    <div class="form-group">
+        <label for="price_currency">Paid in</label>
+        <select id="price_currency" name="price_currency">
+            <?php foreach ($myCoins as $code => $name): ?>
+                <option value="<?= $code ?>" <?= $prefCoin === $code ? 'selected' : '' ?>><?= $code ?> (<?= $name ?>)</option>
+            <?php endforeach; ?>
+        </select>
+        <small>Buyers pay this coin to your wallet address. Set your wallets on your <a href="/profile">profile</a>.</small>
     </div>
     
     <div class="form-group">

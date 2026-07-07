@@ -81,7 +81,7 @@ class ListingController extends BaseController
             'body' => 'required|min:10|max:10000',
             'category_id' => 'required|numeric',
             'location' => 'max:100',
-            'price_sats' => 'numeric'
+            'price_usd' => 'numeric'
         ], $data);
 
         // Validate category exists
@@ -125,16 +125,15 @@ class ListingController extends BaseController
             $this->database->beginTransaction();
 
             // Create listing (unpublished initially - requires payment)
-            $listingId = $this->database->insert('listings', [
+            $listingId = $this->database->insert('listings', array_merge([
                 'user_id' => $this->session->getUserId(),
                 'category_id' => (int)$data['category_id'],
                 'title' => $data['title'],
                 'body' => $data['body'],
-                'price_sats' => !empty($data['price_sats']) ? (int)($data['price_sats'] * 100000000) : 0,
                 'location' => $data['location'] ?? '',
                 'is_published' => false, // Requires payment to publish
                 'is_featured' => false
-            ]);
+            ], $this->priceFields($data)));
 
             // Save uploaded images
             foreach ($uploadedImages as $index => $image) {
@@ -168,6 +167,38 @@ class ListingController extends BaseController
             $this->setFlash('error', 'Failed to create listing. Please try again.');
             $this->redirectBack('/create-listing');
         }
+    }
+
+    /**
+     * Build the USD/crypto price columns from POST. The seller enters a USD
+     * amount and picks a coin (one they have a wallet for, defaulting to their
+     * preferred currency); we convert to crypto server-side and cache it.
+     */
+    private function priceFields(array $data): array
+    {
+        $usd   = max(0.0, (float)($data['price_usd'] ?? 0));
+        $cents = (int)round($usd * 100);
+
+        $coin = strtoupper(trim((string)($data['price_currency'] ?? '')));
+        if (!\App\Services\PricingService::isCoin($coin)) {
+            $user = $this->getCurrentUser();
+            $coin = strtoupper((string)($user['preferred_currency'] ?? ''));
+            if (!\App\Services\PricingService::isCoin($coin)) {
+                $coin = '';
+            }
+        }
+
+        $crypto = 0.0;
+        if ($cents > 0 && $coin !== '') {
+            $crypto = (new \App\Services\PricingService($this->config, $this->database))->convert($cents / 100, $coin);
+        }
+
+        return [
+            'price_usd_cents'       => $cents,
+            'price_currency'        => $coin,
+            'price_crypto'          => $crypto,
+            'price_rate_updated_at' => $crypto > 0 ? date('Y-m-d H:i:s') : null,
+        ];
     }
 
     public function showEdit(array $params): void
@@ -220,7 +251,7 @@ class ListingController extends BaseController
             'body' => 'required|min:10|max:10000',
             'category_id' => 'required|numeric',
             'location' => 'max:100',
-            'price_sats' => 'numeric'
+            'price_usd' => 'numeric'
         ], $data);
 
         // Validate category exists
@@ -277,13 +308,12 @@ class ListingController extends BaseController
             $this->database->beginTransaction();
 
             // Update listing
-            $this->database->update('listings', [
+            $this->database->update('listings', array_merge([
                 'category_id' => (int)$data['category_id'],
                 'title' => $data['title'],
                 'body' => $data['body'],
-                'price_sats' => !empty($data['price_sats']) ? (int)($data['price_sats'] * 100000000) : 0,
                 'location' => $data['location'] ?? ''
-            ], ['id' => $listingId]);
+            ], $this->priceFields($data)), ['id' => $listingId]);
 
             // Delete selected images
             if (!empty($imagesToDelete)) {

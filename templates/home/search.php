@@ -34,12 +34,12 @@ ob_start();
                 </div>
                 
                 <div>
-                    <label for="min_price" style="display: block; margin-bottom: 5px;">Min Price (BTC):</label>
+                    <label for="min_price" style="display: block; margin-bottom: 5px;">Min Price (USD):</label>
                     <input type="number" id="min_price" name="min_price" step="0.00000001" min="0" value="<?= htmlspecialchars($min_price ?? '') ?>" style="width: 100%; padding: 8px;">
                 </div>
                 
                 <div>
-                    <label for="max_price" style="display: block; margin-bottom: 5px;">Max Price (BTC):</label>
+                    <label for="max_price" style="display: block; margin-bottom: 5px;">Max Price (USD):</label>
                     <input type="number" id="max_price" name="max_price" step="0.00000001" min="0" value="<?= htmlspecialchars($max_price ?? '') ?>" style="width: 100%; padding: 8px;">
                 </div>
             </div>
@@ -80,13 +80,13 @@ ob_start();
                 
                 <?php if ($min_price): ?>
                     <span style="display: inline-block; padding: 4px 8px; background: #6c757d; color: white; border-radius: 3px; margin: 2px; font-size: 12px;">
-                        Min: <?= number_format($min_price, 8) ?> BTC
+                        Min: $<?= number_format($min_price, 2) ?>
                     </span>
                 <?php endif; ?>
                 
                 <?php if ($max_price): ?>
                     <span style="display: inline-block; padding: 4px 8px; background: #6c757d; color: white; border-radius: 3px; margin: 2px; font-size: 12px;">
-                        Max: <?= number_format($max_price, 8) ?> BTC
+                        Max: $<?= number_format($max_price, 2) ?>
                     </span>
                 <?php endif; ?>
                 
@@ -122,8 +122,8 @@ ob_start();
                     </h3>
                     
                     <p class="price">
-                        <?php if ($listing['price_sats'] > 0): ?>
-                            <?= number_format($listing['price_sats'] / 100000000, 8) ?> BTC
+                        <?php if ((int)($listing['price_usd_cents'] ?? 0) > 0): ?>
+                            <?= htmlspecialchars(\App\Core\Price::label($listing)) ?>
                         <?php else: ?>
                             Free
                         <?php endif; ?>

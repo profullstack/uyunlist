@@ -27,6 +27,22 @@ class PaymentController extends BaseController
     }
 
     /**
+     * Cron endpoint: recompute cached crypto prices for active listings so
+     * displayed amounts track the market (run hourly). Protected by
+     * ?token=APP_SECRET.
+     */
+    public function refreshPrices(): void
+    {
+        $token = (string)($_GET['token'] ?? '');
+        if (!hash_equals((string)$this->config->get('APP_SECRET'), $token)) {
+            $this->json(['success' => false, 'error' => 'forbidden'], 403);
+            return;
+        }
+        $result = (new \App\Services\PricingService($this->config, $this->database))->refreshActive();
+        $this->json(['success' => true] + $result);
+    }
+
+    /**
      * Standalone, no-JS status panel loaded in an iframe on the pay page. It
      * meta-refreshes every 5s and polls CoinPay on each load, so payment is
      * detected within seconds. Rendered without the site layout (lightweight).

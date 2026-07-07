@@ -66,8 +66,8 @@ ob_start();
             <div class="listing-card">
                 <h3><a href="/listing/<?= $listing['id'] ?>" style="text-decoration: none; color: #333;"><?= htmlspecialchars($listing['title']) ?></a></h3>
                 <p class="price">
-                    <?php if ($listing['price_sats'] > 0): ?>
-                        <?= number_format($listing['price_sats'] / 100000000, 8) ?> BTC
+                    <?php if ((int)($listing['price_usd_cents'] ?? 0) > 0): ?>
+                        <?= htmlspecialchars(\App\Core\Price::label($listing)) ?>
                     <?php else: ?>
                         Free
                     <?php endif; ?>
@@ -96,8 +96,8 @@ ob_start();
                 <div class="listing-card">
                     <h3><a href="/listing/<?= $listing['id'] ?>" style="text-decoration: none; color: #333;"><?= htmlspecialchars($listing['title']) ?></a></h3>
                     <p class="price">
-                        <?php if ($listing['price_sats'] > 0): ?>
-                            <?= number_format($listing['price_sats'] / 100000000, 8) ?> BTC
+                        <?php if ((int)($listing['price_usd_cents'] ?? 0) > 0): ?>
+                            <?= htmlspecialchars(\App\Core\Price::label($listing)) ?>
                         <?php else: ?>
                             Free
                         <?php endif; ?>

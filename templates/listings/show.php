@@ -17,9 +17,9 @@ ob_start();
                 <span> • <?= number_format($listing['view_count']) ?> views</span>
             </div>
             
-            <?php if ($listing['price_sats'] > 0): ?>
+            <?php if ((int)($listing['price_usd_cents'] ?? 0) > 0): ?>
                 <div style="font-size: 24px; font-weight: bold; color: #28a745; margin-bottom: 15px;">
-                    <?= number_format($listing['price_sats'] / 100000000, 8) ?> BTC
+                    <?= htmlspecialchars(\App\Core\Price::label($listing)) ?>
                 </div>
             <?php else: ?>
                 <div style="font-size: 24px; font-weight: bold; color: #28a745; margin-bottom: 15px;">
@@ -148,13 +148,20 @@ ob_start();
             <?php endif; ?>
             
             <?php
-            $pref = strtoupper((string)($listing['preferred_currency'] ?? ''));
+            // Pay the listing's coin (falls back to the seller's preferred) to
+            // the seller's wallet for that coin.
+            $pref = strtoupper((string)($listing['price_currency'] ?: ($listing['preferred_currency'] ?? '')));
             $prefAddr = $pref !== '' ? (string)($listing['wallet_' . strtolower($pref)] ?? '') : '';
             if ($pref !== '' && $prefAddr !== ''):
             ?>
                 <div style="margin-bottom: 15px; padding: 10px; background:#f8f9fa; border-radius:3px;">
-                    <div style="font-size: 13px; color:#666;">Preferred payment</div>
-                    <div style="font-weight: bold; margin-bottom:4px;"><?= htmlspecialchars($pref) ?></div>
+                    <div style="font-size: 13px; color:#666;">Pay the seller</div>
+                    <div style="font-weight: bold; margin-bottom:4px;">
+                        <?php if ((float)($listing['price_crypto'] ?? 0) > 0 && $pref === strtoupper((string)$listing['price_currency'])): ?>
+                            <?= htmlspecialchars(\App\Core\Price::crypto((float)$listing['price_crypto'])) ?>
+                        <?php endif; ?>
+                        <?= htmlspecialchars($pref) ?>
+                    </div>
                     <code style="word-break: break-all; font-size: 12px;"><?= htmlspecialchars($prefAddr) ?></code>
                 </div>
             <?php endif; ?>

@@ -137,6 +137,7 @@ class Application
         $this->router->get('/invoice-status/{invoiceId}', [PaymentController::class, 'invoiceStatus'], ['auth']);
         $this->router->post('/webhook/cryptapi', [PaymentController::class, 'webhook']);
         $this->router->get('/cron/poll-payments', [PaymentController::class, 'pollPayments']);
+        $this->router->get('/cron/refresh-prices', [PaymentController::class, 'refreshPrices']);
 
         // Comments
         $this->router->post('/add-comment', [CommentController::class, 'addComment'], ['auth', 'csrf']);
