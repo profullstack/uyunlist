@@ -37,7 +37,7 @@ $isDraft = !($listing['is_published'] ?? false);
     <?php if (!empty($images)): ?>
         <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
             <?php foreach ($images as $img): ?>
-                <img src="/<?= htmlspecialchars(ltrim((string)$img['path'], '/')) ?>" alt=""
+                <img src="/thumbnail/<?= (int)$img['id'] ?>" alt=""
                      style="width:90px; height:90px; object-fit:cover; border-radius:4px; border:1px solid #ccc;">
             <?php endforeach; ?>
         </div>
