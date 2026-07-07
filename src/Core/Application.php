@@ -89,7 +89,7 @@ class Application
     {
         // Home and browsing
         $this->router->get('/', [HomeController::class, 'index']);
-        $this->router->get('/category/{id}', [HomeController::class, 'category']);
+        $this->router->get('/category/{id}', [HomeController::class, 'categoryById']); // legacy numeric → 301 to slug
         $this->router->get('/search', [HomeController::class, 'search']);
         
         // Warrant Canary
@@ -146,6 +146,14 @@ class Application
         $this->router->get('/admin/listings', [AdminController::class, 'listings'], ['admin']);
         $this->router->get('/admin/reports', [AdminController::class, 'reports'], ['admin']);
         $this->router->post('/admin/moderate', [AdminController::class, 'moderate'], ['admin', 'csrf']);
+
+        // Category browse by slug: /<category> and /<category>/<subcategory>
+        // (e.g. /jobs, /jobs/dealer). Registered LAST on purpose — these are
+        // greedy one/two-segment patterns and the router is first-match-wins,
+        // so every specific route above (/listing/{id}, /login, /pay/... etc.)
+        // takes precedence. A slug that doesn't resolve 404s in the handler.
+        $this->router->get('/{category}/{subcategory}', [HomeController::class, 'subcategory']);
+        $this->router->get('/{slug}', [HomeController::class, 'category']);
     }
 
     public function run(): void

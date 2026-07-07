@@ -80,6 +80,40 @@ abstract class BaseController
         );
     }
 
+    /**
+     * Active categories as a two-level tree: an ordered list of top-level
+     * categories, each with a `children` array plus a `path` (slug URL) on the
+     * parent and every child. Shared by the home nav and the post form.
+     */
+    protected function categoryTree(): array
+    {
+        $rows = $this->database->query(
+            'SELECT id, name, description, slug, parent_id, sort_order
+             FROM categories WHERE is_active = true
+             ORDER BY sort_order, name'
+        );
+
+        $tops = [];
+        $index = [];
+        foreach ($rows as $row) {
+            if ($row['parent_id'] === null) {
+                $row['children'] = [];
+                $row['path'] = '/' . $row['slug'];
+                $index[(string)$row['id']] = count($tops);
+                $tops[] = $row;
+            }
+        }
+        foreach ($rows as $row) {
+            if ($row['parent_id'] !== null && isset($index[(string)$row['parent_id']])) {
+                $pos = $index[(string)$row['parent_id']];
+                $row['path'] = $tops[$pos]['path'] . '/' . $row['slug'];
+                $tops[$pos]['children'][] = $row;
+            }
+        }
+
+        return $tops;
+    }
+
     protected function validateInput(array $rules, array $data): array
     {
         $errors = [];

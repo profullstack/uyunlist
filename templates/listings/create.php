@@ -7,6 +7,11 @@ ob_start();
 
 <p>Create a new listing on Onion Classifieds. Your listing will need to be paid for before it becomes visible to other users.</p>
 
+<div style="margin: 15px 0; padding: 12px 15px; background-color: #f8d7da; border-left: 4px solid #dc3545; color: #721c24;">
+    <strong>🚫 No porn / no sexually explicit content.</strong>
+    This is strictly enforced — listings advertising pornographic or explicit sexual content/services are automatically rejected and may result in a ban.
+</div>
+
 <form method="post" action="/create-listing" enctype="multipart/form-data">
     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">
     
@@ -23,10 +28,17 @@ ob_start();
         <label for="category_id">Category *</label>
         <select id="category_id" name="category_id" required>
             <option value="">Select a category</option>
-            <?php foreach ($categories as $category): ?>
-                <option value="<?= $category['id'] ?>" <?= ($old['category_id'] ?? '') == $category['id'] ? 'selected' : '' ?>>
-                    <?= htmlspecialchars($category['name']) ?>
-                </option>
+            <?php foreach ($categories as $top): ?>
+                <optgroup label="<?= htmlspecialchars($top['name']) ?>">
+                    <option value="<?= $top['id'] ?>" <?= ($old['category_id'] ?? '') == $top['id'] ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($top['name']) ?> (general)
+                    </option>
+                    <?php foreach ($top['children'] ?? [] as $sub): ?>
+                        <option value="<?= $sub['id'] ?>" <?= ($old['category_id'] ?? '') == $sub['id'] ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($sub['name']) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </optgroup>
             <?php endforeach; ?>
         </select>
         <?php if (isset($errors['category_id'])): ?>
@@ -94,6 +106,7 @@ ob_start();
         <li>Respond promptly to inquiries</li>
         <li>Follow all applicable laws and regulations</li>
         <li>No illegal items or services</li>
+        <li><strong>No pornography or sexually explicit content of any kind (strictly enforced)</strong></li>
         <li>No personal information in listings (use messaging system)</li>
     </ul>
 </div>

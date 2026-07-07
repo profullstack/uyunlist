@@ -36,14 +36,23 @@ ob_start();
 <!-- Categories -->
 <div style="margin-bottom: 40px;">
     <h2>Browse Categories</h2>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px;">
         <?php foreach ($categories as $category): ?>
-            <a href="/category/<?= $category['id'] ?>" style="display: block; padding: 15px; background: white; border: 1px solid #ddd; border-radius: 5px; text-decoration: none; color: #333;">
-                <strong><?= htmlspecialchars($category['name']) ?></strong>
+            <div style="padding: 15px; background: white; border: 1px solid #ddd; border-radius: 5px;">
+                <a href="<?= htmlspecialchars($category['path']) ?>" style="text-decoration: none; color: #333;">
+                    <strong><?= htmlspecialchars($category['name']) ?></strong>
+                </a>
                 <?php if (!empty($category['description'])): ?>
                     <br><small style="color: #666;"><?= htmlspecialchars($category['description']) ?></small>
                 <?php endif; ?>
-            </a>
+                <?php if (!empty($category['children'])): ?>
+                    <div style="margin-top: 8px; line-height: 1.9;">
+                        <?php foreach ($category['children'] as $sub): ?>
+                            <a href="<?= htmlspecialchars($sub['path']) ?>" style="display: inline-block; margin: 0 4px 4px 0; padding: 2px 8px; background: #f1f3f5; border-radius: 3px; font-size: 13px; text-decoration: none; color: #495057;"><?= htmlspecialchars($sub['name']) ?></a>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
         <?php endforeach; ?>
     </div>
 </div>
