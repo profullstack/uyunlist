@@ -65,11 +65,27 @@ class Database
         return $this->connection;
     }
 
+    /**
+     * Normalize bound parameters for PostgreSQL. PDO binds array params as
+     * strings, so PHP `false` becomes "" — which Postgres rejects for a boolean
+     * column ("invalid input syntax for type boolean: \"\""). Convert bools to
+     * 0/1, which Postgres accepts for boolean (and integer) columns.
+     */
+    private function normalizeParams(array $params): array
+    {
+        foreach ($params as $key => $value) {
+            if (is_bool($value)) {
+                $params[$key] = $value ? 1 : 0;
+            }
+        }
+        return $params;
+    }
+
     public function query(string $sql, array $params = []): array
     {
         try {
             $stmt = $this->connection->prepare($sql);
-            $stmt->execute($params);
+            $stmt->execute($this->normalizeParams($params));
             return $stmt->fetchAll();
         } catch (PDOException $e) {
             throw new Exception('Query failed: ' . $e->getMessage());
@@ -80,7 +96,7 @@ class Database
     {
         try {
             $stmt = $this->connection->prepare($sql);
-            $stmt->execute($params);
+            $stmt->execute($this->normalizeParams($params));
             $result = $stmt->fetch();
             return $result === false ? null : $result;
         } catch (PDOException $e) {
@@ -92,7 +108,7 @@ class Database
     {
         try {
             $stmt = $this->connection->prepare($sql);
-            $stmt->execute($params);
+            $stmt->execute($this->normalizeParams($params));
             return $stmt->rowCount();
         } catch (PDOException $e) {
             throw new Exception('Execute failed: ' . $e->getMessage());
@@ -113,7 +129,7 @@ class Database
 
         try {
             $stmt = $this->connection->prepare($sql);
-            $stmt->execute($data);
+            $stmt->execute($this->normalizeParams($data));
             $result = $stmt->fetch();
             return (int)$result['id'];
         } catch (PDOException $e) {
@@ -143,7 +159,7 @@ class Database
 
         try {
             $stmt = $this->connection->prepare($sql);
-            $stmt->execute($params);
+            $stmt->execute($this->normalizeParams($params));
             return $stmt->rowCount();
         } catch (PDOException $e) {
             throw new Exception('Update failed: ' . $e->getMessage());
@@ -162,7 +178,7 @@ class Database
 
         try {
             $stmt = $this->connection->prepare($sql);
-            $stmt->execute($where);
+            $stmt->execute($this->normalizeParams($where));
             return $stmt->rowCount();
         } catch (PDOException $e) {
             throw new Exception('Delete failed: ' . $e->getMessage());
