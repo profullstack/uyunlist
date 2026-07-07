@@ -60,20 +60,12 @@ class CryptAPIService
         $baseUrl = $this->config->get('APP_BASE_URL');
         $callbackUrl = rtrim($baseUrl, '/') . '/webhook/cryptapi';
 
-        // Create CryptAPI request
-        $apiResponse = $this->callCryptAPI($currency, [
-            'callback' => $callbackUrl,
-            'address' => $payoutAddress,
-            'confirmations' => $confirmations,
-            'post' => 1,
-            'json' => 1
-        ]);
+        // A Tor hidden service can't use a payment gateway with webhook
+        // callbacks (CryptAPI/BlockBee reject .onion callback URLs), so payments
+        // go DIRECTLY to the operator's own address. There's no unique per-
+        // invoice address; the operator confirms receipt (see AdminController).
+        $addressIn = $payoutAddress;
 
-        if (!$apiResponse['success']) {
-            throw new Exception('CryptAPI error: ' . $apiResponse['error']);
-        }
-
-        // Store invoice in database
         $invoiceId = $this->database->insert('invoices', [
             'user_id' => $userId,
             'purpose' => $purpose,
@@ -83,7 +75,7 @@ class CryptAPIService
             'currency' => $currency,
             'crypto_rate' => $cryptoRate,
             'crypto_amount' => $amount,
-            'address_in' => $apiResponse['data']['address_in'],
+            'address_in' => $addressIn,
             'confirmations_required' => $confirmations,
             'confirmations_received' => 0,
             'is_pending_notified' => false,
@@ -92,10 +84,11 @@ class CryptAPIService
 
         return [
             'invoice_id' => $invoiceId,
-            'address_in' => $apiResponse['data']['address_in'],
+            'address_in' => $addressIn,
             'amount' => $amount,
             'currency' => $currency,
-            'qr_code' => $this->generateQRCodeUrl($currency, $apiResponse['data']['address_in'], $amount),
+            'payment_uri' => $this->generatePaymentUri($currency, $addressIn, $amount),
+            'qr_code' => $this->generatePaymentUri($currency, $addressIn, $amount),
             'expires_at' => time() + 86400,
             'confirmations_required' => $confirmations
         ];
@@ -314,20 +307,21 @@ class CryptAPIService
      * @param float $amount
      * @return string
      */
-    private function generateQRCodeUrl(string $currency, string $address, float $amount): string
+    /**
+     * Self-contained payment URI (no external service — an onion page must not
+     * load off-site resources). Wallets understand these schemes directly.
+     */
+    private function generatePaymentUri(string $currency, string $address, float $amount): string
     {
-        $currency = strtolower($currency);
-        
-        // Build payment URI
-        $paymentUri = match ($currency) {
-            'btc' => "bitcoin:{$address}?amount={$amount}",
-            'eth' => "ethereum:{$address}?value=" . ($amount * 1e18), // Convert to wei
-            'doge' => "dogecoin:{$address}?amount={$amount}",
-            default => "{$currency}:{$address}?amount={$amount}"
+        $amountStr = rtrim(rtrim(number_format($amount, 18, '.', ''), '0'), '.');
+        return match (strtolower($currency)) {
+            'btc'  => "bitcoin:{$address}?amount={$amountStr}",
+            'eth'  => "ethereum:{$address}?value={$amountStr}",
+            'doge' => "dogecoin:{$address}?amount={$amountStr}",
+            'xmr'  => "monero:{$address}?tx_amount={$amountStr}",
+            'sol'  => "solana:{$address}?amount={$amountStr}",
+            default => "{$address}",
         };
-
-        // Use CryptAPI's QR code service
-        return "https://api.cryptapi.io/{$currency}/qrcode/?address={$address}&value={$amount}&size=300";
     }
 
     /**

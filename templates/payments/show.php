@@ -71,16 +71,17 @@ ob_start();
                 <?= htmlspecialchars($invoice['address_in']) ?>
             </div>
             
-            <!-- QR Code -->
-            <div style="margin: 20px 0;">
-                <img src="https://api.cryptapi.io/<?= strtolower($invoice['currency']) ?>/qrcode/?address=<?= urlencode($invoice['address_in']) ?>&value=<?= $invoice['crypto_amount'] ?>&size=300" 
-                     alt="Payment QR Code" 
-                     style="max-width: 300px; border: 1px solid #ddd; border-radius: 5px;">
-            </div>
-            
+            <?php
+            // Self-contained wallet URI (no external image — an onion page must
+            // not load off-site resources).
+            $cur = strtolower($invoice['currency']);
+            $amt = rtrim(rtrim(number_format((float)$invoice['crypto_amount'], 18, '.', ''), '0'), '.');
+            $scheme = ['btc' => 'bitcoin', 'eth' => 'ethereum', 'doge' => 'dogecoin', 'xmr' => 'monero', 'sol' => 'solana'][$cur] ?? $cur;
+            $amtParam = $cur === 'xmr' ? 'tx_amount' : ($cur === 'eth' ? 'value' : 'amount');
+            $uri = "{$scheme}:{$invoice['address_in']}?{$amtParam}={$amt}";
+            ?>
             <div style="margin-top: 15px; font-size: 14px; color: #666;">
-                <p>Scan QR code with your <?= strtoupper($invoice['currency']) ?> wallet</p>
-                <p>Or copy the address above</p>
+                <p><a href="<?= htmlspecialchars($uri) ?>">Open in your <?= strtoupper($invoice['currency']) ?> wallet</a>, or copy the address above.</p>
             </div>
         </div>
 
