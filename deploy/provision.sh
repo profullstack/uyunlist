@@ -81,6 +81,9 @@ mkdir -p "$TOR_DATA_DIR/hidden_service"
 chmod 700 "$TOR_DATA_DIR/hidden_service"
 
 # ── 4) Fetch/update the code, generate .env ──────────────────────────────────
+# We run git as root but the checkout is owned by $APP_USER — tell git that's
+# fine (idempotent) so re-runs don't trip "dubious ownership".
+git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
 if [ -d "$APP_DIR/.git" ]; then
   log "Updating repo in $APP_DIR ($REPO_BRANCH)"
   git -C "$APP_DIR" fetch --depth=1 origin "$REPO_BRANCH"
