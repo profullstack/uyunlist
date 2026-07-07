@@ -93,10 +93,8 @@ class PaymentController extends BaseController
         $uri = "{$scheme}:{$invoice['address_in']}?{$amtParam}={$amt}";
 
         $options = new \chillerlan\QRCode\QROptions([
-            'outputType'  => \chillerlan\QRCode\Output\QROutputInterface::MARKUP_SVG,
-            'eccLevel'    => \chillerlan\QRCode\Common\EccLevel::M,
-            'addQuietzone' => true,
-            'svgViewBoxSize' => 0,
+            'outputInterface' => \chillerlan\QRCode\Output\QRMarkupSVG::class,
+            'eccLevel'        => \chillerlan\QRCode\Common\EccLevel::M,
         ]);
 
         header('Content-Type: image/svg+xml');
