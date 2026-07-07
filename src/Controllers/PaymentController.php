@@ -10,6 +10,22 @@ use Exception;
 
 class PaymentController extends BaseController
 {
+    /**
+     * Cron endpoint: poll CoinPay for open invoices and settle paid ones. A Tor
+     * hidden service can't receive webhooks, so a cron on the box curls this
+     * (e.g. every minute). Protected by ?token=APP_SECRET.
+     */
+    public function pollPayments(): void
+    {
+        $token = (string)($_GET['token'] ?? '');
+        if (!hash_equals((string)$this->config->get('APP_SECRET'), $token)) {
+            $this->json(['success' => false, 'error' => 'forbidden'], 403);
+            return;
+        }
+        $result = (new CryptAPIService($this->config, $this->database))->pollCoinpayInvoices();
+        $this->json(['success' => true] + $result);
+    }
+
     public function showPayment(array $params): void
     {
         $invoiceId = (int)$params['invoiceId'];

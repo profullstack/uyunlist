@@ -60,11 +60,25 @@ class CryptAPIService
         $baseUrl = $this->config->get('APP_BASE_URL');
         $callbackUrl = rtrim($baseUrl, '/') . '/webhook/cryptapi';
 
-        // A Tor hidden service can't use a payment gateway with webhook
-        // callbacks (CryptAPI/BlockBee reject .onion callback URLs), so payments
-        // go DIRECTLY to the operator's own address. There's no unique per-
-        // invoice address; the operator confirms receipt (see AdminController).
-        $addressIn = $payoutAddress;
+        // Preferred path: route through the CoinPay gateway server-side (the
+        // customer never sees it). CoinPay returns a unique deposit address that
+        // forwards to the operator's wallet, and we poll it for confirmation —
+        // no inbound webhook, which a .onion can't receive anyway.
+        //
+        // Fallback (CoinPay disabled, or a coin it doesn't support like XMR):
+        // pay the operator's own address directly, confirmed manually.
+        $addressIn   = $payoutAddress;
+        $coinpayMeta = null;
+
+        $coinpay = new CoinpayService($this->config, $this->database);
+        if ($coinpay->isEnabled() && $coinpay->supports($currency)) {
+            $cp = $coinpay->createPayment($fiatAmount, $currency, $payoutAddress, $purpose);
+            $addressIn = $cp['address'];
+            if ($cp['crypto_amount'] > 0) {
+                $amount = $cp['crypto_amount']; // CoinPay's amount is authoritative
+            }
+            $coinpayMeta = json_encode(['coinpay_id' => $cp['payment_id']]);
+        }
 
         $invoiceId = $this->database->insert('invoices', [
             'user_id' => $userId,
@@ -79,6 +93,7 @@ class CryptAPIService
             'confirmations_required' => $confirmations,
             'confirmations_received' => 0,
             'is_pending_notified' => false,
+            'webhook_raw' => $coinpayMeta,
             'expires_at' => date('Y-m-d H:i:s', time() + 86400) // 24 hours
         ]);
 
@@ -218,6 +233,45 @@ class CryptAPIService
         } catch (Exception $e) {
             error_log('markInvoicePaid purpose failed: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Poll CoinPay for every open invoice that has a CoinPay payment id and
+     * settle the ones it reports paid. Called from a cron endpoint (a .onion
+     * can't receive webhooks) and, opportunistically, when a payer views the
+     * invoice. Returns ['checked' => n, 'settled' => n].
+     */
+    public function pollCoinpayInvoices(): array
+    {
+        $coinpay = new CoinpayService($this->config, $this->database);
+        if (!$coinpay->isEnabled()) {
+            return ['checked' => 0, 'settled' => 0];
+        }
+
+        $rows = $this->database->query(
+            "SELECT id, webhook_raw FROM invoices
+              WHERE status = 'new' AND webhook_raw IS NOT NULL AND expires_at > NOW()"
+        );
+
+        $checked = 0;
+        $settled = 0;
+        foreach ($rows as $row) {
+            $meta = json_decode((string)$row['webhook_raw'], true);
+            $coinpayId = is_array($meta) ? (string)($meta['coinpay_id'] ?? '') : '';
+            if ($coinpayId === '') {
+                continue;
+            }
+            $checked++;
+            try {
+                if ($coinpay->isPaidStatus($coinpay->getStatus($coinpayId))) {
+                    $this->markInvoicePaid((int)$row['id']);
+                    $settled++;
+                }
+            } catch (Exception $e) {
+                error_log('CoinPay poll failed for invoice ' . $row['id'] . ': ' . $e->getMessage());
+            }
+        }
+        return ['checked' => $checked, 'settled' => $settled];
     }
 
     public function getInvoice(int $invoiceId): ?array

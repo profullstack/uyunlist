@@ -107,6 +107,13 @@ APP_DEBUG=false
 TATUM_API_URL=https://api.tatum.io/v3
 TATUM_API_KEY=your-tatum-api-key
 
+# CoinPay gateway (server-side, hidden from customers). Set the key to route
+# payments through CoinPay (deposit address + status polling); leave as-is to
+# pay the operator's wallet address directly.
+COINPAY_API_URL=https://coinpayportal.com
+COINPAY_API_KEY=your-coinpay-api-key
+COINPAY_BUSINESS_ID=
+
 # CryptAPI payout addresses — REQUIRED; replace with your own before going live.
 PAYOUT_BTC=your-btc-address
 PAYOUT_XMR=your-xmr-address

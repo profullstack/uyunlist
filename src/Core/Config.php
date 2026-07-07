@@ -42,6 +42,12 @@ class Config
         // Tatum API
         $this->config['TATUM_API_URL'] = $_ENV['TATUM_API_URL'] ?? 'https://api.tatum.io/v3';
         $this->config['TATUM_API_KEY'] = $_ENV['TATUM_API_KEY'] ?? '';
+
+        // CoinPay gateway (server-side; hidden from customers). When the key is
+        // set, invoices use CoinPay deposit addresses + status polling.
+        $this->config['COINPAY_API_URL'] = $_ENV['COINPAY_API_URL'] ?? 'https://coinpayportal.com';
+        $this->config['COINPAY_API_KEY'] = $_ENV['COINPAY_API_KEY'] ?? '';
+        $this->config['COINPAY_BUSINESS_ID'] = $_ENV['COINPAY_BUSINESS_ID'] ?? '';
         
         // Upload Configuration
         $this->config['UPLOAD_MAX_SIZE'] = (int)($_ENV['UPLOAD_MAX_SIZE'] ?? 15728640); // 15MB
