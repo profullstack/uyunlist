@@ -154,7 +154,7 @@ bash scripts/apply-migrations.sh || echo "WARN: migrations step reported an issu
 log "Waiting for the .onion hostname"
 ONION=""
 for _ in $(seq 1 60); do
-  ONION="$(docker compose exec -T tor cat /var/lib/tor/hidden_service/hostname 2>/dev/null | tr -d '\r\n' || true)"
+  ONION="$(docker compose exec -T tor cat /var/lib/tor/hidden_service/hostname </dev/null 2>/dev/null | tr -d '\r\n' || true)"
   [ -n "$ONION" ] && break
   sleep 3
 done

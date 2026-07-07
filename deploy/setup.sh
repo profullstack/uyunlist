@@ -28,16 +28,22 @@ SSH_OPTS="${SSH_OPTS:--o StrictHostKeyChecking=accept-new}"
 echo "🚀 Deploying uyunlist to $SSH_TARGET (branch: $REPO_BRANCH)"
 
 # If the target is not root, run the provisioner under sudo on the far side.
-RUNNER="bash -s"
+RUNNER="bash"
 case "$SSH_TARGET" in
   root@*|root) : ;;
-  *) RUNNER="sudo -E bash -s" ;;
+  *) RUNNER="sudo -E bash" ;;
 esac
 
+# Copy the provisioner over and run it as a FILE (not piped via stdin): the
+# provisioner uses `docker compose exec`, which attaches stdin, so piping the
+# script into `bash -s` would let docker consume the rest of it and corrupt the
+# parse. Running from a file (with stdin from /dev/null) avoids that entirely.
+REMOTE_SCRIPT="/tmp/uyunlist-provision.$$.sh"
+# shellcheck disable=SC2086
+scp $SSH_OPTS deploy/provision.sh "$SSH_TARGET:$REMOTE_SCRIPT"
 # shellcheck disable=SC2086
 ssh $SSH_OPTS "$SSH_TARGET" \
-  "REPO_URL='$REPO_URL' REPO_BRANCH='$REPO_BRANCH' VOLUME_DIR='$VOLUME_DIR' $RUNNER" \
-  < deploy/provision.sh
+  "REPO_URL='$REPO_URL' REPO_BRANCH='$REPO_BRANCH' VOLUME_DIR='$VOLUME_DIR' $RUNNER $REMOTE_SCRIPT </dev/null; rc=\$?; rm -f $REMOTE_SCRIPT; exit \$rc"
 
 echo "✅ Deploy finished. Onion address:"
 # shellcheck disable=SC2086

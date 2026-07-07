@@ -28,5 +28,9 @@ apt-get install -y curl ca-certificates
 
 RAW="https://raw.githubusercontent.com/profullstack/uyunlist/${REPO_BRANCH}/deploy/provision.sh"
 echo "Fetching provisioner: $RAW"
-curl -fsSL "$RAW" \
-  | REPO_URL="$REPO_URL" REPO_BRANCH="$REPO_BRANCH" VOLUME_DIR="$VOLUME_DIR" bash
+# Download then run as a FILE (not `curl | bash`): the provisioner uses
+# `docker compose exec`, which attaches stdin and would otherwise consume the
+# piped script and corrupt the parse.
+curl -fsSL "$RAW" -o /tmp/uyunlist-provision.sh
+REPO_URL="$REPO_URL" REPO_BRANCH="$REPO_BRANCH" VOLUME_DIR="$VOLUME_DIR" \
+  bash /tmp/uyunlist-provision.sh </dev/null
