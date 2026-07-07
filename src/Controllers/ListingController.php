@@ -56,13 +56,8 @@ class ListingController extends BaseController
 
     public function showCreate(): void
     {
-        // Get categories for dropdown
-        $categories = $this->database->query(
-            'SELECT * FROM categories WHERE is_active = true ORDER BY sort_order, name'
-        );
-
         $this->render('listings/create', [
-            'categories' => $categories
+            'categories' => $this->categoryTree()
         ]);
     }
 
@@ -90,6 +85,12 @@ class ListingController extends BaseController
             }
         }
 
+        // Enforce the strict no-porn policy on the listing text.
+        if (empty($errors['title']) && empty($errors['body'])
+            && \App\Core\ContentPolicy::violatesNoPorn((string)($data['title'] ?? ''), (string)($data['body'] ?? ''))) {
+            $errors['body'] = \App\Core\ContentPolicy::NO_PORN_MESSAGE;
+        }
+
         // Handle image uploads
         $uploadedImages = [];
         if (isset($_FILES['images']) && !empty($_FILES['images']['name'][0])) {
@@ -102,12 +103,8 @@ class ListingController extends BaseController
         }
 
         if (!empty($errors)) {
-            $categories = $this->database->query(
-                'SELECT * FROM categories WHERE is_active = true ORDER BY sort_order, name'
-            );
-            
             $this->render('listings/create', [
-                'categories' => $categories,
+                'categories' => $this->categoryTree(),
                 'errors' => $errors,
                 'old' => $data
             ]);
@@ -178,11 +175,6 @@ class ListingController extends BaseController
             throw new Exception('Listing not found or access denied', 404);
         }
 
-        // Get categories
-        $categories = $this->database->query(
-            'SELECT * FROM categories WHERE is_active = true ORDER BY sort_order, name'
-        );
-
         // Get existing images
         $images = $this->database->query(
             'SELECT * FROM listing_images WHERE listing_id = ? ORDER BY sort_order, id',
@@ -191,7 +183,7 @@ class ListingController extends BaseController
 
         $this->render('listings/edit', [
             'listing' => $listing,
-            'categories' => $categories,
+            'categories' => $this->categoryTree(),
             'images' => $images
         ]);
     }
@@ -232,6 +224,12 @@ class ListingController extends BaseController
             }
         }
 
+        // Enforce the strict no-porn policy on the listing text.
+        if (empty($errors['title']) && empty($errors['body'])
+            && \App\Core\ContentPolicy::violatesNoPorn((string)($data['title'] ?? ''), (string)($data['body'] ?? ''))) {
+            $errors['body'] = \App\Core\ContentPolicy::NO_PORN_MESSAGE;
+        }
+
         // Handle new image uploads
         $uploadedImages = [];
         if (isset($_FILES['images']) && !empty($_FILES['images']['name'][0])) {
@@ -250,10 +248,6 @@ class ListingController extends BaseController
         }
 
         if (!empty($errors)) {
-            $categories = $this->database->query(
-                'SELECT * FROM categories WHERE is_active = true ORDER BY sort_order, name'
-            );
-            
             $images = $this->database->query(
                 'SELECT * FROM listing_images WHERE listing_id = ? ORDER BY sort_order, id',
                 [$listingId]
@@ -261,7 +255,7 @@ class ListingController extends BaseController
 
             $this->render('listings/edit', [
                 'listing' => $listing,
-                'categories' => $categories,
+                'categories' => $this->categoryTree(),
                 'images' => $images,
                 'errors' => $errors,
                 'old' => $data

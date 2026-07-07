@@ -6,6 +6,12 @@ ob_start();
 <div style="margin-bottom: 30px;">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
         <div>
+            <?php if (!empty($parent)): ?>
+                <div style="font-size: 14px; color: #666; margin-bottom: 4px;">
+                    <a href="/<?= htmlspecialchars($parent['slug']) ?>" style="color: #007bff; text-decoration: none;"><?= htmlspecialchars($parent['name']) ?></a>
+                    &rsaquo; <?= htmlspecialchars($category['name']) ?>
+                </div>
+            <?php endif; ?>
             <h1><?= htmlspecialchars($category['name']) ?></h1>
             <?php if (!empty($category['description'])): ?>
                 <p style="color: #666; margin: 5px 0;"><?= htmlspecialchars($category['description']) ?></p>
@@ -23,6 +29,17 @@ ob_start();
         </div>
     </div>
     
+    <?php if (!empty($subcategories)): ?>
+        <!-- Subcategories -->
+        <div style="margin-bottom: 15px; line-height: 2;">
+            <?php foreach ($subcategories as $sub): ?>
+                <a href="<?= htmlspecialchars($sub['path']) ?>" style="display: inline-block; margin: 0 6px 6px 0; padding: 4px 12px; background: #fff; border: 1px solid #ddd; border-radius: 15px; font-size: 14px; text-decoration: none; color: #333;">
+                    <?= htmlspecialchars($sub['name']) ?>
+                </a>
+            <?php endforeach; ?>
+        </div>
+    <?php endif; ?>
+
     <!-- Search within category -->
     <div style="background: #f8f9fa; padding: 15px; border-radius: 5px;">
         <form method="get" action="/search">
