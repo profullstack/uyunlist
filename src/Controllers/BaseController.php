@@ -29,7 +29,10 @@ abstract class BaseController
         // Add common data available to all templates
         $data['config'] = $this->config;
         $data['session'] = $this->session;
-        $data['csrf_token'] = $this->session->isLoggedIn() ? $this->session->getCsrfToken() : '';
+        // Every rendered form needs a CSRF token — including guest forms like
+        // login/register — so always emit one (it's tied to the session, not
+        // to being logged in).
+        $data['csrf_token'] = $this->session->getCsrfToken();
         $data['current_user'] = $this->getCurrentUser();
         $data['flash_messages'] = $this->getFlashMessages();
 

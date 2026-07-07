@@ -130,20 +130,26 @@ class Session
 
     public function getCsrfToken(): string
     {
-        if (!$this->isLoggedIn()) {
-            throw new Exception('No active session for CSRF token');
+        // A CSRF token belongs to the PHP session, not to being logged in:
+        // guests need one to submit the login/register forms. Mint it lazily
+        // and persist it in the session (login() rotates it afterwards).
+        if (empty($_SESSION['csrf_token'])) {
+            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
         }
-        
-        return $_SESSION['csrf_token'] ?? '';
+
+        return $_SESSION['csrf_token'];
     }
 
     public function validateCsrfToken(string $token): bool
     {
-        if (!$this->isLoggedIn()) {
+        $sessionToken = $_SESSION['csrf_token'] ?? '';
+
+        // Reject empty tokens outright so a session without a token can't be
+        // satisfied by an empty POST field.
+        if ($sessionToken === '' || $token === '') {
             return false;
         }
-        
-        $sessionToken = $_SESSION['csrf_token'] ?? '';
+
         return hash_equals($sessionToken, $token);
     }
 
