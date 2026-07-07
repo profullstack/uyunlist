@@ -328,52 +328,8 @@ class AuthController extends BaseController
 
     private function processAvatar(string $filepath, string $mimeType): void
     {
-        $maxWidth = 200;
-        $maxHeight = 200;
-
-        // Create image resource
-        $image = match ($mimeType) {
-            'image/jpeg' => imagecreatefromjpeg($filepath),
-            'image/png' => imagecreatefrompng($filepath),
-            'image/webp' => imagecreatefromwebp($filepath),
-            default => throw new Exception('Unsupported image type')
-        };
-
-        if (!$image) {
-            throw new Exception('Failed to create image resource');
-        }
-
-        // Get original dimensions
-        $originalWidth = imagesx($image);
-        $originalHeight = imagesy($image);
-
-        // Calculate new dimensions
-        $ratio = min($maxWidth / $originalWidth, $maxHeight / $originalHeight);
-        $newWidth = (int)($originalWidth * $ratio);
-        $newHeight = (int)($originalHeight * $ratio);
-
-        // Create new image
-        $newImage = imagecreatetruecolor($newWidth, $newHeight);
-        
-        // Preserve transparency for PNG and WebP
-        if ($mimeType === 'image/png' || $mimeType === 'image/webp') {
-            imagealphablending($newImage, false);
-            imagesavealpha($newImage, true);
-        }
-
-        // Resize image
-        imagecopyresampled($newImage, $image, 0, 0, 0, 0, $newWidth, $newHeight, $originalWidth, $originalHeight);
-
-        // Save processed image
-        match ($mimeType) {
-            'image/jpeg' => imagejpeg($newImage, $filepath, 85),
-            'image/png' => imagepng($newImage, $filepath, 6),
-            'image/webp' => imagewebp($newImage, $filepath, 85),
-            default => throw new Exception('Unsupported image type')
-        };
-
-        // Clean up
-        imagedestroy($image);
-        imagedestroy($newImage);
+        // Square 200px avatar, metadata stripped, via Imagick. See
+        // App\Core\ImageProcessor.
+        \App\Core\ImageProcessor::squareThumb($filepath, $filepath, 200);
     }
 }

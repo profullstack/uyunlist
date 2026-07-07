@@ -79,7 +79,7 @@ ob_start();
         <?php if (isset($errors['images'])): ?>
             <div class="error"><?= htmlspecialchars($errors['images']) ?></div>
         <?php endif; ?>
-        <small>Upload up to 5 images. JPEG, PNG, or WebP format. Maximum 5MB per image.</small>
+        <small>Upload up to 20 images. JPEG, PNG, or WebP format. Maximum 15MB per image. All metadata (EXIF/GPS) is stripped automatically.</small>
     </div>
     
     <div class="form-group">

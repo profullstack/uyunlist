@@ -196,47 +196,8 @@ class ImageController extends BaseController
 
     private function generateThumbnail(string $sourcePath, string $thumbnailPath, int $size): void
     {
-        // Determine source image type
-        $finfo = finfo_open(FILEINFO_MIME_TYPE);
-        $mimeType = finfo_file($finfo, $sourcePath);
-        finfo_close($finfo);
-
-        // Create source image
-        $sourceImage = match ($mimeType) {
-            'image/jpeg' => imagecreatefromjpeg($sourcePath),
-            'image/png' => imagecreatefrompng($sourcePath),
-            'image/webp' => imagecreatefromwebp($sourcePath),
-            default => throw new Exception('Unsupported image type for thumbnail')
-        };
-
-        if (!$sourceImage) {
-            throw new Exception('Failed to create source image');
-        }
-
-        // Get source dimensions
-        $sourceWidth = imagesx($sourceImage);
-        $sourceHeight = imagesy($sourceImage);
-
-        // Calculate thumbnail dimensions (square crop from center)
-        $cropSize = min($sourceWidth, $sourceHeight);
-        $cropX = ($sourceWidth - $cropSize) / 2;
-        $cropY = ($sourceHeight - $cropSize) / 2;
-
-        // Create thumbnail image
-        $thumbnail = imagecreatetruecolor($size, $size);
-        
-        // Copy and resize
-        imagecopyresampled(
-            $thumbnail, $sourceImage,
-            0, 0, (int)$cropX, (int)$cropY,
-            $size, $size, $cropSize, $cropSize
-        );
-
-        // Save as JPEG
-        imagejpeg($thumbnail, $thumbnailPath, 85);
-
-        // Clean up
-        imagedestroy($sourceImage);
-        imagedestroy($thumbnail);
+        // Square, center-cropped, metadata-stripped JPEG thumbnail via Imagick.
+        // See App\Core\ImageProcessor.
+        \App\Core\ImageProcessor::squareThumb($sourcePath, $thumbnailPath, $size);
     }
 }

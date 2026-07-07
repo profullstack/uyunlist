@@ -420,7 +420,7 @@ class ListingController extends BaseController
 
     private function handleImageUploads(array $files): array
     {
-        $maxFiles = $this->config->get('UPLOAD_MAX_FILES', 5);
+        $maxFiles = $this->config->get('UPLOAD_MAX_FILES', 20);
         $maxSize = $this->config->get('UPLOAD_MAX_SIZE', 5242880); // 5MB
         $allowedTypes = $this->config->get('UPLOAD_ALLOWED_TYPES', ['image/jpeg', 'image/png', 'image/webp']);
         
@@ -494,67 +494,8 @@ class ListingController extends BaseController
 
     private function processListingImage(string $filepath, string $mimeType): array
     {
-        $maxWidth = 1200;
-        $maxHeight = 800;
-
-        // Create image resource
-        $image = match ($mimeType) {
-            'image/jpeg' => imagecreatefromjpeg($filepath),
-            'image/png' => imagecreatefrompng($filepath),
-            'image/webp' => imagecreatefromwebp($filepath),
-            default => throw new Exception('Unsupported image type')
-        };
-
-        if (!$image) {
-            throw new Exception('Failed to create image resource');
-        }
-
-        // Get original dimensions
-        $originalWidth = imagesx($image);
-        $originalHeight = imagesy($image);
-
-        // Calculate new dimensions if resizing needed
-        $needsResize = $originalWidth > $maxWidth || $originalHeight > $maxHeight;
-        
-        if ($needsResize) {
-            $ratio = min($maxWidth / $originalWidth, $maxHeight / $originalHeight);
-            $newWidth = (int)($originalWidth * $ratio);
-            $newHeight = (int)($originalHeight * $ratio);
-
-            // Create new image
-            $newImage = imagecreatetruecolor($newWidth, $newHeight);
-            
-            // Preserve transparency for PNG and WebP
-            if ($mimeType === 'image/png' || $mimeType === 'image/webp') {
-                imagealphablending($newImage, false);
-                imagesavealpha($newImage, true);
-            }
-
-            // Resize image
-            imagecopyresampled($newImage, $image, 0, 0, 0, 0, $newWidth, $newHeight, $originalWidth, $originalHeight);
-
-            // Save processed image
-            match ($mimeType) {
-                'image/jpeg' => imagejpeg($newImage, $filepath, 85),
-                'image/png' => imagepng($newImage, $filepath, 6),
-                'image/webp' => imagewebp($newImage, $filepath, 85),
-                default => throw new Exception('Unsupported image type')
-            };
-
-            imagedestroy($newImage);
-            $finalWidth = $newWidth;
-            $finalHeight = $newHeight;
-        } else {
-            $finalWidth = $originalWidth;
-            $finalHeight = $originalHeight;
-        }
-
-        // Clean up
-        imagedestroy($image);
-
-        return [
-            'width' => $finalWidth,
-            'height' => $finalHeight
-        ];
+        // Downscale to fit 1200x800 and strip ALL metadata (EXIF/GPS/etc.) via
+        // Imagick — on every upload, resized or not. See App\Core\ImageProcessor.
+        return \App\Core\ImageProcessor::sanitize($filepath, 1200, 800, 85);
     }
 }
