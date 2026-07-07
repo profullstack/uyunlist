@@ -34,10 +34,11 @@ ob_start();
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
                     <?php foreach ($images as $image): ?>
                         <div style="border: 1px solid #ddd; border-radius: 5px; overflow: hidden;">
-                            <img src="/image/<?= $image['id'] ?>" 
-                                 alt="Listing image" 
-                                 style="width: 100%; height: 200px; object-fit: cover; cursor: pointer;"
-                                 onclick="openImageModal('/image/<?= $image['id'] ?>')">
+                            <a href="/image/<?= $image['id'] ?>" target="_blank" rel="noopener" title="Open full image in a new tab">
+                                <img src="/image/<?= $image['id'] ?>"
+                                     alt="Listing image"
+                                     style="width: 100%; height: 200px; object-fit: cover; cursor: pointer; display: block;">
+                            </a>
                         </div>
                     <?php endforeach; ?>
                 </div>
