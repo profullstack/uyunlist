@@ -20,11 +20,18 @@ class ListingController extends BaseController
              FROM listings l
              JOIN categories c ON l.category_id = c.id
              JOIN users u ON l.user_id = u.id
-             WHERE l.id = ? AND l.is_published = true',
+             WHERE l.id = ?',
             [$listingId]
         );
 
         if (!$listing) {
+            throw new Exception('Listing not found', 404);
+        }
+
+        // Drafts (unpublished) are visible only to their owner, as a preview.
+        $isOwner = $this->session->isLoggedIn() &&
+                   $this->session->getUserId() === (int)$listing['user_id'];
+        if (!$listing['is_published'] && !$isOwner) {
             throw new Exception('Listing not found', 404);
         }
 
@@ -43,10 +50,6 @@ class ListingController extends BaseController
             'UPDATE listings SET view_count = view_count + 1 WHERE id = ?',
             [$listingId]
         );
-
-        // Check if current user owns this listing
-        $isOwner = $this->session->isLoggedIn() &&
-                   $this->session->getUserId() === (int)$listing['user_id'];
 
         $this->render('listings/show', [
             'listing' => $listing,
