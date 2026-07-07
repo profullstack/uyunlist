@@ -22,7 +22,7 @@
 set -euo pipefail
 
 # ── Tunables (override via env) ───────────────────────────────────────────────
-REPO_URL="${REPO_URL:-https://codeberg.org/chovy/uyunlist.git}"
+REPO_URL="${REPO_URL:-https://github.com/profullstack/uyunlist.git}"
 REPO_BRANCH="${REPO_BRANCH:-master}"
 APP_DIR="${APP_DIR:-/opt/uyunlist}"
 APP_USER="${APP_USER:-ubuntu}"

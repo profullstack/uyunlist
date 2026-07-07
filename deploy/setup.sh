@@ -20,7 +20,7 @@ cd "$(dirname "$0")/.."
 
 # root is required for the very first provision (Docker install, user creation).
 SSH_TARGET="${SSH_TARGET:-root@137.184.123.182}"
-REPO_URL="${REPO_URL:-https://codeberg.org/chovy/uyunlist.git}"
+REPO_URL="${REPO_URL:-https://github.com/profullstack/uyunlist.git}"
 REPO_BRANCH="${REPO_BRANCH:-master}"
 VOLUME_DIR="${VOLUME_DIR:-/mnt/unyunvolume}"
 SSH_OPTS="${SSH_OPTS:--o StrictHostKeyChecking=accept-new}"

@@ -1,0 +1,60 @@
+# GitHub Actions CD — push-to-deploy onto the droplet.
+#
+# The droplet is provisioned by deploy/provision.sh (via deploy/setup.sh or
+# cloud-init). This workflow handles ongoing deploys: on every push to master it
+# SSHes in and re-runs the idempotent provisioner (pull + rebuild + migrate). It
+# no-ops unless the deploy secrets are set, so the repo still builds fine before
+# you wire it up.
+#
+# Repo secrets (Settings → Secrets and variables → Actions):
+#   DEPLOY_HOST     droplet IP or hostname
+#   DEPLOY_USER     ssh user (default: root)
+#   DEPLOY_SSH_KEY  a private key whose public half is in the droplet's
+#                   ~/.ssh/authorized_keys
+name: deploy
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check secrets
+        id: gate
+        run: |
+          if [ -z "${{ secrets.DEPLOY_HOST }}" ] || [ -z "${{ secrets.DEPLOY_SSH_KEY }}" ]; then
+            echo "Deploy secrets not set — skipping (this is fine)."
+            echo "go=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "go=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Deploy over SSH
+        if: steps.gate.outputs.go == 'true'
+        env:
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          USER: ${{ secrets.DEPLOY_USER }}
+          KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$KEY" > ~/.ssh/id && chmod 600 ~/.ssh/id
+          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          # Re-run the idempotent provisioner (root) — or a plain pull+up if the
+          # deploy user is unprivileged.
+          if [ "${USER:-root}" = "root" ]; then
+            ssh -i ~/.ssh/id "root@$HOST" \
+              "REPO_BRANCH=master bash -s" < deploy/provision.sh
+          else
+            ssh -i ~/.ssh/id "${USER}@$HOST" bash -s <<'REMOTE'
+              set -e
+              cd /opt/uyunlist
+              git fetch --depth=1 origin master
+              git reset --hard origin/master
+              docker compose up -d --build
+              bash scripts/apply-migrations.sh || true
+              echo "Deployed: $(git rev-parse --short HEAD)"
+          REMOTE
+          fi

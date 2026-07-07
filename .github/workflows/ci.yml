@@ -1,5 +1,5 @@
-# Forgejo Actions CI — runs on Codeberg's CI (docs.forgejo.org actions).
-# Validates the PHP app + the Docker/Supabase stack on every push and PR.
+# GitHub Actions CI — validates the PHP app + the Docker/Supabase stack on
+# every push and PR.
 name: ci
 
 on:
@@ -9,7 +9,7 @@ on:
 
 jobs:
   php:
-    runs-on: docker
+    runs-on: ubuntu-latest
     container:
       image: php:8.2-cli
     steps:
@@ -26,13 +26,9 @@ jobs:
         run: composer cs-check || true
 
   stack:
-    runs-on: docker
-    container:
-      image: docker:27-cli
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Tooling
-        run: apk add --no-cache bash openssl
       - name: Generate .env (secrets + Supabase JWT keys)
         run: bash scripts/generate-env.sh --force
       - name: Validate docker-compose config

@@ -16,7 +16,7 @@
 # /mnt/unyunvolume (that's where the .onion keys are persisted).
 #
 # Tunables (edit before pasting):
-REPO_URL="${REPO_URL:-https://codeberg.org/chovy/uyunlist.git}"
+REPO_URL="${REPO_URL:-https://github.com/profullstack/uyunlist.git}"
 REPO_BRANCH="${REPO_BRANCH:-master}"
 VOLUME_DIR="${VOLUME_DIR:-/mnt/unyunvolume}"
 
@@ -26,7 +26,7 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
 apt-get install -y curl ca-certificates
 
-RAW="https://codeberg.org/chovy/uyunlist/raw/branch/${REPO_BRANCH}/deploy/provision.sh"
+RAW="https://raw.githubusercontent.com/profullstack/uyunlist/${REPO_BRANCH}/deploy/provision.sh"
 echo "Fetching provisioner: $RAW"
 curl -fsSL "$RAW" \
   | REPO_URL="$REPO_URL" REPO_BRANCH="$REPO_BRANCH" VOLUME_DIR="$VOLUME_DIR" bash

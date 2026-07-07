@@ -71,18 +71,18 @@ Edit `/opt/uyunlist/.env` (via the DO web console or your first SSH) and set:
 
 then `docker compose up -d app`.
 
-## 3. Continuous deploys with Forgejo Actions
+## Continuous deploys with GitHub Actions
 
-Setup is SSH-free; ongoing deploys use [Forgejo Actions](https://forgejo.org/docs/latest/user/actions/quick-start/)
-(Codeberg CI). `.forgejo/workflows/`:
+Ongoing deploys use [GitHub Actions](https://docs.github.com/actions).
+`.github/workflows/`:
 
 - **`ci.yml`** — on every push/PR: `php -l` the source, `composer install` from
   the lockfile, and validate the compose config + generated JWT keys.
-- **`deploy.yml`** — on push to `master`: SSH to the droplet and
-  `git pull && docker compose up -d --build && apply-migrations`. It **no-ops
+- **`deploy.yml`** — on push to `master`: SSH to the droplet and re-run the
+  idempotent `deploy/provision.sh` (pull + rebuild + migrate). It **no-ops
   until you set the secrets**, so CI stays green in the meantime.
 
-Set these repo secrets (Settings → Actions → Secrets) to enable CD:
+Set these repo secrets (Settings → Secrets and variables → Actions) to enable CD:
 
 | Secret | Value |
 |---|---|
