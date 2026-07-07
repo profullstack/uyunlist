@@ -26,9 +26,13 @@ REPO_URL="${REPO_URL:-https://github.com/profullstack/uyunlist.git}"
 REPO_BRANCH="${REPO_BRANCH:-master}"
 APP_DIR="${APP_DIR:-/opt/uyunlist}"
 APP_USER="${APP_USER:-ubuntu}"
-# The attached block-storage volume mount, and where on it the tor keys live.
+# The attached block-storage volume mount, and where on it the persistent state
+# lives (onion keys, database, uploaded images, backups).
 VOLUME_DIR="${VOLUME_DIR:-/mnt/unyunvolume}"
 TOR_DATA_DIR="${TOR_DATA_DIR:-$VOLUME_DIR/tor}"
+DB_DATA_DIR="${DB_DATA_DIR:-$VOLUME_DIR/db}"
+UPLOADS_DIR="${UPLOADS_DIR:-$VOLUME_DIR/uploads}"
+DB_BACKUPS_DIR="${DB_BACKUPS_DIR:-$VOLUME_DIR/backups}"
 
 log() { echo "=== $* ==="; }
 
@@ -88,11 +92,15 @@ if ! mountpoint -q "$VOLUME_DIR"; then
   echo "  will NOT be on persistent block storage. Attach the volume and mount"
   echo "  it at $VOLUME_DIR, then re-run, to make the address survive rebuilds."
 fi
-log "Tor keys will persist at $TOR_DATA_DIR"
-mkdir -p "$TOR_DATA_DIR/hidden_service"
+log "Persisting state on the volume: tor keys, database, uploads, backups"
+mkdir -p "$TOR_DATA_DIR/hidden_service" "$DB_DATA_DIR" "$DB_BACKUPS_DIR" \
+         "$UPLOADS_DIR"/avatars "$UPLOADS_DIR"/listings "$UPLOADS_DIR"/thumbnails
 # The tor container (running as root) chowns these to the tor user on start;
 # 700 on the key dir keeps tor happy in the meantime.
 chmod 700 "$TOR_DATA_DIR/hidden_service"
+# A bind mount shadows the image's baked-in uploads/ subdirs with an empty host
+# dir, so create them here. The app runs as www-data (uid 33) and writes here.
+chown -R 33:33 "$UPLOADS_DIR" 2>/dev/null || true
 
 # ── 4) Fetch/update the code, generate .env ──────────────────────────────────
 # We run git as root but the checkout is owned by $APP_USER — tell git that's
@@ -125,6 +133,9 @@ set_env() {  # set_env KEY VALUE — replace or append KEY=VALUE in .env
   fi
 }
 set_env TOR_DATA_DIR "$TOR_DATA_DIR"
+set_env DB_DATA_DIR "$DB_DATA_DIR"
+set_env UPLOADS_DIR "$UPLOADS_DIR"
+set_env DB_BACKUPS_DIR "$DB_BACKUPS_DIR"
 set_env COMPOSE_FILE "docker-compose.yml:deploy/docker-compose.volume.yml"
 
 # ── 5) Bring up the stack + migrate ──────────────────────────────────────────
