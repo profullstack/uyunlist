@@ -51,6 +51,20 @@ if ! command -v docker >/dev/null 2>&1; then
 fi
 systemctl enable --now docker
 
+# ── 1b) Ensure some swap on small droplets (idempotent) ──────────────────────
+# The lean stack (db + app + tor) fits in ~1 GB, but a little swap keeps a 1 GB
+# box off the OOM-killer during image builds and Postgres init.
+SWAPFILE="/swapfile"
+if ! swapon --show=NAME --noheadings 2>/dev/null | grep -q "$SWAPFILE" && [ ! -f "$SWAPFILE" ]; then
+  log "Creating 2G swapfile"
+  if fallocate -l 2G "$SWAPFILE" 2>/dev/null || dd if=/dev/zero of="$SWAPFILE" bs=1M count=2048; then
+    chmod 600 "$SWAPFILE"
+    mkswap "$SWAPFILE" >/dev/null
+    swapon "$SWAPFILE"
+    grep -q "^$SWAPFILE " /etc/fstab || echo "$SWAPFILE none swap sw 0 0" >> /etc/fstab
+  fi
+fi
+
 # ── 2) Create the ubuntu sudo/docker user (idempotent) ───────────────────────
 # The base image only ships a root login; make `ubuntu@host` work by copying
 # root's authorized_keys, and let it run docker + sudo without a password.
@@ -114,7 +128,12 @@ set_env TOR_DATA_DIR "$TOR_DATA_DIR"
 set_env COMPOSE_FILE "docker-compose.yml:deploy/docker-compose.volume.yml"
 
 # ── 5) Bring up the stack + migrate ──────────────────────────────────────────
-log "Bringing up the stack (docker compose up -d --build)"
+# Stop anything from a previous run first (incl. now-profiled Supabase API
+# services and removed analytics/vector orphans) so we converge on the lean
+# db+app+tor set. The .onion keys live on the volume, so tor's address is
+# unchanged across the restart.
+log "Bringing up the lean stack (db + app + tor)"
+docker compose down --remove-orphans || true
 docker compose up -d --build
 
 log "Applying database migrations"

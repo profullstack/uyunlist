@@ -6,6 +6,7 @@ services:
   # Supabase Studio
   studio:
     container_name: supabase-studio
+    profiles: ["full"]
     image: supabase/studio:2026.06.03-sha-0bca601
     restart: unless-stopped
     healthcheck:
@@ -41,6 +42,7 @@ services:
   # Supabase Kong API Gateway
   kong:
     container_name: supabase-kong
+    profiles: ["full"]
     image: kong:2.8.1
     restart: unless-stopped
     entrypoint: bash -c 'eval "echo \"$$(cat ~/temp.yml)\"" > ~/kong.yml && /docker-entrypoint.sh kong docker-start'
@@ -64,6 +66,7 @@ services:
   # Supabase Auth
   auth:
     container_name: supabase-auth
+    profiles: ["full"]
     image: supabase/gotrue:v2.158.1
     depends_on:
       db:
@@ -120,6 +123,7 @@ services:
   # Supabase REST API
   rest:
     container_name: supabase-rest
+    profiles: ["full"]
     image: postgrest/postgrest:v12.2.0
     depends_on:
       db:
@@ -139,6 +143,7 @@ services:
   # Supabase Realtime
   realtime:
     container_name: supabase-realtime
+    profiles: ["full"]
     image: supabase/realtime:v2.30.23
     depends_on:
       db:
@@ -177,6 +182,7 @@ services:
   # Supabase Storage
   storage:
     container_name: supabase-storage
+    profiles: ["full"]
     image: supabase/storage-api:v1.11.1
     depends_on:
       db:
@@ -219,6 +225,7 @@ services:
   # Image Proxy
   imgproxy:
     container_name: supabase-imgproxy
+    profiles: ["full"]
     image: darthsim/imgproxy:v3.8.0
     healthcheck:
       test: [ "CMD", "imgproxy", "health" ]
@@ -236,6 +243,7 @@ services:
   # Supabase Meta
   meta:
     container_name: supabase-meta
+    profiles: ["full"]
     image: supabase/postgres-meta:v0.84.2
     depends_on:
       db:
@@ -252,6 +260,7 @@ services:
   # Supabase Functions
   functions:
     container_name: supabase-edge-functions
+    profiles: ["full"]
     image: supabase/edge-runtime:v1.58.2
     restart: unless-stopped
     environment:
@@ -316,8 +325,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      kong:
-        condition: service_started
     environment:
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
       APP_SECRET: ${APP_SECRET}
