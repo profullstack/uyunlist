@@ -95,6 +95,7 @@ class PaymentController extends BaseController
         $options = new \chillerlan\QRCode\QROptions([
             'outputInterface' => \chillerlan\QRCode\Output\QRMarkupSVG::class,
             'eccLevel'        => \chillerlan\QRCode\Common\EccLevel::M,
+            'outputBase64'    => false, // raw <svg> markup, not a data: URI
         ]);
 
         header('Content-Type: image/svg+xml');
