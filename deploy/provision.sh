@@ -171,6 +171,16 @@ else
   echo "  docker compose exec tor cat /var/lib/tor/hidden_service/hostname"
 fi
 
+# ── 7) Payment polling cron (onion can't receive webhooks) ───────────────────
+# Every minute, ask the app to poll CoinPay for open invoices. No-op until
+# COINPAY_API_KEY is set. Idempotent.
+chmod +x "$APP_DIR/scripts/poll-cron.sh" 2>/dev/null || true
+CRON_LINE="* * * * * $APP_DIR/scripts/poll-cron.sh"
+if ! crontab -l 2>/dev/null | grep -qF "poll-cron.sh"; then
+  log "Installing payment-poll cron"
+  (crontab -l 2>/dev/null; echo "$CRON_LINE") | crontab -
+fi
+
 log "uyunlist provisioning finished $(date -u)"
 echo "Onion:      $(cat "$APP_DIR/ONION_ADDRESS.txt" 2>/dev/null || echo 'pending — check tor logs')"
 echo "Keys:       $TOR_DATA_DIR/hidden_service (on the block volume)"
