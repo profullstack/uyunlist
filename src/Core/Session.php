@@ -130,20 +130,25 @@ class Session
 
     public function getCsrfToken(): string
     {
-        if (!$this->isLoggedIn()) {
-            throw new Exception('No active session for CSRF token');
+        // CSRF protection must work for anonymous visitors too — the register
+        // and login forms are submitted by guests. Lazily mint a token bound to
+        // the PHP session (anonymous or authenticated) and reuse it. login()
+        // rotates this on privilege change.
+        if (empty($_SESSION['csrf_token'])) {
+            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
         }
-        
-        return $_SESSION['csrf_token'] ?? '';
+        return $_SESSION['csrf_token'];
     }
 
     public function validateCsrfToken(string $token): bool
     {
-        if (!$this->isLoggedIn()) {
+        // Validate against the per-session token regardless of login state, so
+        // guest POSTs (register/login) aren't rejected outright. Reject empties
+        // so a session with no issued token can't be satisfied by a blank field.
+        $sessionToken = $_SESSION['csrf_token'] ?? '';
+        if ($sessionToken === '' || $token === '') {
             return false;
         }
-        
-        $sessionToken = $_SESSION['csrf_token'] ?? '';
         return hash_equals($sessionToken, $token);
     }
 

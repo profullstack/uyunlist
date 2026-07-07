@@ -29,7 +29,7 @@ abstract class BaseController
         // Add common data available to all templates
         $data['config'] = $this->config;
         $data['session'] = $this->session;
-        $data['csrf_token'] = $this->session->isLoggedIn() ? $this->session->getCsrfToken() : '';
+        $data['csrf_token'] = $this->session->getCsrfToken();
         $data['current_user'] = $this->getCurrentUser();
         $data['flash_messages'] = $this->getFlashMessages();
 
