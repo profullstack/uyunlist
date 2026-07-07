@@ -48,7 +48,46 @@ ob_start();
                 <?php endif; ?>
                 <small>JPEG, PNG, or WebP. Maximum 2MB. Will be resized to 200x200 pixels.</small>
             </div>
-            
+
+            <fieldset style="border:1px solid #dee2e6; border-radius:5px; padding:15px; margin-bottom:15px;">
+                <legend><strong>Crypto Wallets</strong></legend>
+                <div class="form-group">
+                    <label for="wallet_block">Import from coinpay</label>
+                    <textarea id="wallet_block" name="wallet_block" rows="5"
+                              placeholder="Paste your coinpay wallet block here, e.g.&#10;BTC: bc1q...&#10;XMR: 4...&#10;ETH: 0x...&#10;SOL: ...&#10;DOGE: D..."></textarea>
+                    <small>Paste the block from your coinpay wallet — recognised addresses fill the fields below. You can also edit them directly.</small>
+                </div>
+
+                <?php
+                $coins = ['BTC' => 'Bitcoin', 'XMR' => 'Monero', 'ETH' => 'Ethereum', 'SOL' => 'Solana', 'DOGE' => 'Dogecoin'];
+                foreach ($coins as $code => $name):
+                    $field = 'wallet_' . strtolower($code);
+                    $val = $old[$field] ?? ($user[$field] ?? '');
+                ?>
+                    <div class="form-group">
+                        <label for="<?= $field ?>"><?= $code ?> <span style="opacity:.7;">(<?= $name ?>)</span></label>
+                        <input type="text" id="<?= $field ?>" name="<?= $field ?>"
+                               value="<?= htmlspecialchars((string)$val) ?>" placeholder="<?= $code ?> address"
+                               autocomplete="off" spellcheck="false">
+                        <?php if (isset($errors[$field])): ?>
+                            <div class="error"><?= htmlspecialchars($errors[$field]) ?></div>
+                        <?php endif; ?>
+                    </div>
+                <?php endforeach; ?>
+
+                <div class="form-group">
+                    <label for="preferred_currency">Preferred payment currency</label>
+                    <select id="preferred_currency" name="preferred_currency">
+                        <option value="">— none —</option>
+                        <?php foreach ($coins as $code => $name):
+                            $sel = (($old['preferred_currency'] ?? ($user['preferred_currency'] ?? '')) === $code) ? ' selected' : ''; ?>
+                            <option value="<?= $code ?>"<?= $sel ?>><?= $code ?> (<?= $name ?>)</option>
+                        <?php endforeach; ?>
+                    </select>
+                    <small>Buyers will be shown this address by default.</small>
+                </div>
+            </fieldset>
+
             <div class="form-group">
                 <button type="submit">Update Profile</button>
             </div>

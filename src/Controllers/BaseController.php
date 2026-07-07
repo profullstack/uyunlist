@@ -75,7 +75,9 @@ abstract class BaseController
 
         $userId = $this->session->getUserId();
         return $this->database->queryOne(
-            'SELECT id, handle, about, avatar_path, is_admin, created_at FROM users WHERE id = ?',
+            'SELECT id, handle, about, avatar_path, is_admin, created_at,
+                    wallet_btc, wallet_xmr, wallet_eth, wallet_sol, wallet_doge, preferred_currency
+               FROM users WHERE id = ?',
             [$userId]
         );
     }

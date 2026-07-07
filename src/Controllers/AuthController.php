@@ -234,6 +234,30 @@ class AuthController extends BaseController
             }
         }
 
+        // Crypto wallets: parse the pasted coinpay block, then let any explicit
+        // per-coin field override it. Validate each address loosely.
+        $parsedWallets = \App\Core\WalletImport::parse((string)($_POST['wallet_block'] ?? ''));
+        $walletValues = [];
+        foreach (\App\Core\WalletImport::codes() as $code) {
+            $field = 'wallet_' . strtolower($code);
+            $val = trim((string)($_POST[$field] ?? ''));
+            if ($val === '' && isset($parsedWallets[$code])) {
+                $val = $parsedWallets[$code];
+            }
+            if ($val !== '' && !\App\Core\WalletImport::looksLikeAddress($code, $val)) {
+                $errors[$field] = "That doesn't look like a valid {$code} address.";
+                continue;
+            }
+            $walletValues[$field] = $val;
+        }
+
+        // Preferred currency must be one we support (and, ideally, one they have
+        // an address for — but we only hard-require it to be a known code).
+        $preferred = strtoupper(trim((string)($_POST['preferred_currency'] ?? '')));
+        if ($preferred !== '' && !in_array($preferred, \App\Core\WalletImport::codes(), true)) {
+            $preferred = '';
+        }
+
         if (!empty($errors)) {
             $this->render('auth/profile', [
                 'user' => $user,
@@ -244,10 +268,11 @@ class AuthController extends BaseController
         }
 
         try {
-            $updateData = [
+            $updateData = array_merge([
                 'about' => $data['about'] ?? '',
-                'avatar_path' => $avatarPath
-            ];
+                'avatar_path' => $avatarPath,
+                'preferred_currency' => $preferred,
+            ], $walletValues);
 
             // Update password if provided
             if (!empty($data['new_password'])) {

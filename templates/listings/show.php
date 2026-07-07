@@ -147,6 +147,18 @@ ob_start();
                 </div>
             <?php endif; ?>
             
+            <?php
+            $pref = strtoupper((string)($listing['preferred_currency'] ?? ''));
+            $prefAddr = $pref !== '' ? (string)($listing['wallet_' . strtolower($pref)] ?? '') : '';
+            if ($pref !== '' && $prefAddr !== ''):
+            ?>
+                <div style="margin-bottom: 15px; padding: 10px; background:#f8f9fa; border-radius:3px;">
+                    <div style="font-size: 13px; color:#666;">Preferred payment</div>
+                    <div style="font-weight: bold; margin-bottom:4px;"><?= htmlspecialchars($pref) ?></div>
+                    <code style="word-break: break-all; font-size: 12px;"><?= htmlspecialchars($prefAddr) ?></code>
+                </div>
+            <?php endif; ?>
+
             <?php if ($current_user && !$is_owner): ?>
                 <form method="post" action="/start-conversation">
                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrf_token) ?>">

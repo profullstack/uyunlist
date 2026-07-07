@@ -14,10 +14,12 @@ class ListingController extends BaseController
         
         // Get listing with category and user info
         $listing = $this->database->queryOne(
-            'SELECT l.*, c.name as category_name, u.handle as user_handle, u.about as user_about
-             FROM listings l 
-             JOIN categories c ON l.category_id = c.id 
-             JOIN users u ON l.user_id = u.id 
+            'SELECT l.*, c.name as category_name, u.handle as user_handle, u.about as user_about,
+                    u.avatar_path, u.preferred_currency,
+                    u.wallet_btc, u.wallet_xmr, u.wallet_eth, u.wallet_sol, u.wallet_doge
+             FROM listings l
+             JOIN categories c ON l.category_id = c.id
+             JOIN users u ON l.user_id = u.id
              WHERE l.id = ? AND l.is_published = true',
             [$listingId]
         );
