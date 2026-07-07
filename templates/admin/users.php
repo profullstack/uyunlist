@@ -11,6 +11,7 @@ ob_start();
     <a href="/admin/users">Users</a>
     <a href="/admin/listings">Listings</a>
     <a href="/admin/reports">Reports</a>
+    <a href="/admin/invoices">Invoices</a>
 </nav>
 
 <table style="width:100%;border-collapse:collapse;">

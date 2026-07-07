@@ -10,6 +10,7 @@ ob_start();
     <a href="/admin/users">Users</a>
     <a href="/admin/listings">Listings</a>
     <a href="/admin/reports">Reports<?= ($stats['reports_pending'] ?? 0) > 0 ? ' (' . (int)$stats['reports_pending'] . ')' : '' ?></a>
+    <a href="/admin/invoices">Invoices</a>
 </nav>
 
 <div class="admin-stats" style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1.5rem;">

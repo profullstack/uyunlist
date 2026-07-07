@@ -92,6 +92,22 @@ class AdminController extends BaseController
         ]);
     }
 
+    public function invoices(): void
+    {
+        $invoices = $this->database->query(
+            "SELECT i.id, i.purpose, i.status, i.currency, i.fiat_amount, i.crypto_amount,
+                    i.address_in, i.created_at, u.handle
+               FROM invoices i
+               LEFT JOIN users u ON u.id = i.user_id
+              ORDER BY (i.status = 'new') DESC, i.created_at DESC LIMIT 200"
+        );
+
+        $this->render('admin/invoices', [
+            'title'    => 'Admin · Invoices',
+            'invoices' => $invoices,
+        ]);
+    }
+
     /**
      * Single POST endpoint for all moderation actions. Expects `action` plus an
      * `id`, and redirects back to the page it came from with a flash message.
@@ -163,6 +179,14 @@ class AdminController extends BaseController
                     [$status, $adminId, $id]
                 );
                 $this->setFlash('success', "Report {$status}.");
+                break;
+            case 'invoice_confirm':
+                (new \App\Services\CryptAPIService($this->config, $this->database))->markInvoicePaid($id);
+                $this->setFlash('success', 'Invoice marked paid — purpose processed (listing published if applicable).');
+                break;
+            case 'invoice_cancel':
+                $this->database->update('invoices', ['status' => 'cancelled'], ['id' => $id]);
+                $this->setFlash('success', 'Invoice cancelled.');
                 break;
             default:
                 $this->setFlash('error', 'Unknown moderation action.');

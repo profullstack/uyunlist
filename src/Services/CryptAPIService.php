@@ -190,6 +190,36 @@ class CryptAPIService
      * @param int $invoiceId
      * @return array|null
      */
+    /**
+     * Manually settle an invoice (operator verified the payment landed in their
+     * wallet). Mirrors the webhook settle path: mark settled and run the purpose
+     * (e.g. publish the listing). Idempotent — a settled invoice is a no-op.
+     */
+    public function markInvoicePaid(int $invoiceId): void
+    {
+        $invoice = $this->getInvoice($invoiceId);
+        if (!$invoice) {
+            throw new Exception('Invoice not found');
+        }
+        if ($invoice['status'] === 'settled') {
+            return;
+        }
+
+        $this->database->update('invoices', [
+            'status' => 'settled',
+            'settled_at' => date('Y-m-d H:i:s'),
+            'confirmations_received' => (int)$invoice['confirmations_required'],
+        ], ['id' => $invoiceId]);
+
+        // Publishing the listing (etc.) — non-fatal if the purpose is a plain
+        // label rather than the "action:id" form.
+        try {
+            $this->processPurpose((string)$invoice['purpose'], (int)$invoice['user_id']);
+        } catch (Exception $e) {
+            error_log('markInvoicePaid purpose failed: ' . $e->getMessage());
+        }
+    }
+
     public function getInvoice(int $invoiceId): ?array
     {
         return $this->database->queryOne('SELECT * FROM invoices WHERE id = ?', [$invoiceId]);

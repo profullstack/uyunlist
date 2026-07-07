@@ -147,6 +147,7 @@ class Application
         $this->router->get('/admin/users', [AdminController::class, 'users'], ['admin']);
         $this->router->get('/admin/listings', [AdminController::class, 'listings'], ['admin']);
         $this->router->get('/admin/reports', [AdminController::class, 'reports'], ['admin']);
+        $this->router->get('/admin/invoices', [AdminController::class, 'invoices'], ['admin']);
         $this->router->post('/admin/moderate', [AdminController::class, 'moderate'], ['admin', 'csrf']);
 
         // Category browse by slug: /<category> and /<category>/<subcategory>
