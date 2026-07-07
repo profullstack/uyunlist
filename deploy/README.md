@@ -50,16 +50,38 @@ user; afterwards `ubuntu@<host>` works too (`SSH_TARGET=ubuntu@<host>`).
 > The repo must be reachable by `git clone`. If it's private, set `REPO_URL` at
 > the top of the script to an authenticated URL (deploy token).
 
-### Where the .onion keys live
+## Sizing / lean by default
 
-The `tor` service keeps its keys under `/var/lib/tor/hidden_service`. Normally
-that's a Docker-managed volume on the root disk; on the droplet,
-[`deploy/docker-compose.volume.yml`](docker-compose.volume.yml) rebinds it onto
-the attached block volume at `${TOR_DATA_DIR}` (default `/mnt/unyunvolume/tor`).
-`provision.sh` wires that override in by writing
+The PHP app talks to Postgres **directly** and does not use the Supabase API
+layer, so the stack runs lean by default — only **db + app + tor**. That fits a
+**1 GB** droplet (2 GB comfortable); `provision.sh` also adds a 2 GB swapfile.
+
+The full Supabase dashboard/API (Studio, Kong, GoTrue, PostgREST, Realtime,
+Storage, imgproxy, postgres-meta, edge-functions) is gated behind a `full`
+profile and is **not needed by this app**. Only run it on a **≥ 4 GB** box:
+
+```bash
+docker compose --profile full up -d
+```
+
+## Where persistent state lives (the block volume)
+
+All precious state is bind-mounted onto the attached block volume (default
+`/mnt/unyunvolume`) via [`deploy/docker-compose.volume.yml`](docker-compose.volume.yml),
+so it survives `docker compose down`, a full rebuild, or reattaching the volume
+to a new droplet:
+
+| Volume | Host path | What |
+|---|---|---|
+| `tor_data` | `${TOR_DATA_DIR}` (`…/tor`) | `.onion` hidden-service keys (the address) |
+| `db_data` | `${DB_DATA_DIR}` (`…/db`) | Postgres — listings, users, … |
+| `uploads_data` | `${UPLOADS_DIR}` (`…/uploads`) | uploaded images (listings, avatars, thumbs) |
+| `db_backups` | `${DB_BACKUPS_DIR}` (`…/backups`) | pg backups |
+
+`provision.sh` creates those dirs and wires the override in by writing
 `COMPOSE_FILE=docker-compose.yml:deploy/docker-compose.volume.yml` into `.env`,
 so every `docker compose` command on the box uses it automatically. To rotate
-the address, stop the stack and delete `/mnt/unyunvolume/tor/hidden_service`.
+the onion address, stop the stack and delete `/mnt/unyunvolume/tor/hidden_service`.
 
 ## 2. Set the real payment config (before going live)
 
