@@ -38,8 +38,9 @@ class TatumService
             }
         }
 
-        // Fetch fresh rate from Tatum API
-        $rate = $this->fetchRateFromTatum($fromCurrency, $toCurrency);
+        // Fetch fresh rate: use Tatum if a real API key is configured, else
+        // fall back to keyless CoinGecko so rates work out of the box.
+        $rate = $this->fetchRate($fromCurrency, $toCurrency);
         
         // Cache the result
         $this->rateCache[$cacheKey] = [
@@ -133,8 +134,74 @@ class TatumService
     }
 
     /**
+     * Pick a rate provider. Tatum needs a paid API key; when it isn't set (or is
+     * still the placeholder), fall back to CoinGecko's keyless public endpoint so
+     * the marketplace shows live rates without any configuration.
+     */
+    private function fetchRate(string $fromCurrency, string $toCurrency): float
+    {
+        $apiKey = (string)$this->config->get('TATUM_API_KEY');
+        $hasTatum = $apiKey !== '' && $apiKey !== 'your-tatum-api-key';
+
+        return $hasTatum
+            ? $this->fetchRateFromTatum($fromCurrency, $toCurrency)
+            : $this->fetchRateFromCoinGecko($fromCurrency, $toCurrency);
+    }
+
+    /**
+     * Keyless rate from CoinGecko. Returns USD price of 1 unit of $toCurrency
+     * (only USD base is supported here). Fetched server-side.
+     */
+    private function fetchRateFromCoinGecko(string $fromCurrency, string $toCurrency): float
+    {
+        if (strtoupper($fromCurrency) !== 'USD') {
+            throw new Exception('CoinGecko fallback only supports a USD base');
+        }
+
+        $ids = [
+            'BTC' => 'bitcoin', 'XMR' => 'monero', 'ETH' => 'ethereum',
+            'SOL' => 'solana',  'DOGE' => 'dogecoin',
+        ];
+        $id = $ids[strtoupper($toCurrency)] ?? null;
+        if ($id === null) {
+            throw new Exception("Unsupported currency: {$toCurrency}");
+        }
+
+        $url = 'https://api.coingecko.com/api/v3/simple/price?ids=' . $id . '&vs_currencies=usd';
+
+        $ch = curl_init();
+        curl_setopt_array($ch, [
+            CURLOPT_URL => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 10,
+            CURLOPT_CONNECTTIMEOUT => 5,
+            CURLOPT_HTTPHEADER => ['Accept: application/json'],
+            CURLOPT_USERAGENT => 'OnionClassifieds/1.0',
+        ]);
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_error($ch);
+        curl_close($ch);
+
+        if ($response === false) {
+            throw new Exception('cURL error: ' . $error);
+        }
+        if ($httpCode !== 200) {
+            throw new Exception("CoinGecko API error: HTTP {$httpCode}");
+        }
+
+        $data = json_decode($response, true);
+        $rate = (float)($data[$id]['usd'] ?? 0);
+        if ($rate <= 0) {
+            throw new Exception('Invalid exchange rate received from CoinGecko');
+        }
+
+        return $rate;
+    }
+
+    /**
      * Fetch exchange rate from Tatum API
-     * 
+     *
      * @param string $fromCurrency
      * @param string $toCurrency
      * @return float
