@@ -339,6 +339,16 @@ services:
       PAYOUT_DOGE: ${PAYOUT_DOGE}
       LISTING_PRICE_CENTS: ${LISTING_PRICE_CENTS}
       BUMP_PRICE_CENTS: ${BUMP_PRICE_CENTS}
+      # Upload / session / rate-limit config — the app reads these from its
+      # environment, so they must be passed through (they aren't in .env-only).
+      UPLOAD_MAX_SIZE: ${UPLOAD_MAX_SIZE}
+      UPLOAD_MAX_FILES: ${UPLOAD_MAX_FILES}
+      UPLOAD_ALLOWED_TYPES: ${UPLOAD_ALLOWED_TYPES}
+      SESSION_LIFETIME: ${SESSION_LIFETIME}
+      CSRF_TOKEN_LIFETIME: ${CSRF_TOKEN_LIFETIME}
+      RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED}
+      RATE_LIMIT_REQUESTS: ${RATE_LIMIT_REQUESTS}
+      RATE_LIMIT_WINDOW: ${RATE_LIMIT_WINDOW}
     volumes:
       - uploads_data:/var/www/html/uploads:Z
       - logs_data:/var/www/html/logs:Z

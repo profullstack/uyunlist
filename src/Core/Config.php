@@ -44,8 +44,8 @@ class Config
         $this->config['TATUM_API_KEY'] = $_ENV['TATUM_API_KEY'] ?? '';
         
         // Upload Configuration
-        $this->config['UPLOAD_MAX_SIZE'] = (int)($_ENV['UPLOAD_MAX_SIZE'] ?? 5242880); // 5MB
-        $this->config['UPLOAD_MAX_FILES'] = (int)($_ENV['UPLOAD_MAX_FILES'] ?? 5);
+        $this->config['UPLOAD_MAX_SIZE'] = (int)($_ENV['UPLOAD_MAX_SIZE'] ?? 15728640); // 15MB
+        $this->config['UPLOAD_MAX_FILES'] = (int)($_ENV['UPLOAD_MAX_FILES'] ?? 20);
         $this->config['UPLOAD_ALLOWED_TYPES'] = explode(',', $_ENV['UPLOAD_ALLOWED_TYPES'] ?? 'image/jpeg,image/png,image/webp');
         
         // Pricing
